@@ -1,8 +1,8 @@
 package cosmo
 
 import (
-	"github.com/hwcer/cosgo/cosmo/schema"
 	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/cosmo/schema"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 

@@ -2,8 +2,8 @@ package cosmo
 
 import (
 	"errors"
-	"github.com/hwcer/cosgo/cosmo/clause"
-	"github.com/hwcer/cosgo/cosmo/schema"
+	"github.com/hwcer/cosmo/clause"
+	"github.com/hwcer/cosmo/schema"
 	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
 	"strings"

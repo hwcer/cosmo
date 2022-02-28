@@ -1,7 +1,7 @@
 package cosmo
 
 import (
-	"github.com/hwcer/cosgo/cosmo/clause"
+	"github.com/hwcer/cosmo/clause"
 	"reflect"
 )
 

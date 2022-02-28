@@ -2,7 +2,7 @@ package cosmo
 
 import (
 	"context"
-	"gorm.io/gorm/logger"
+	"github.com/hwcer/cosgo/logger"
 	"time"
 )
 

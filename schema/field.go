@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"github.com/hwcer/cosmo/utils"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/now"
-	"gorm.io/gorm/utils"
 )
 
 type DataType string
