@@ -6,7 +6,6 @@ replace github.com/hwcer/cosmo v0.0.0 => ./
 
 require (
 	github.com/hwcer/cosgo v0.0.0-20220225110328-001eb298db60
-	github.com/hwcer/cosmo v0.0.0
 	github.com/jinzhu/now v1.1.4
 	go.mongodb.org/mongo-driver v1.8.3
 	gorm.io/gorm v1.23.1
@@ -15,6 +14,7 @@ require (
 require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
