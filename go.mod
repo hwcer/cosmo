@@ -1,4 +1,4 @@
-module cosmo
+module github.com/hwcer/cosmo
 
 go 1.17
 
