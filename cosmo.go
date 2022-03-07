@@ -61,7 +61,9 @@ func (db *DB) Start(address interface{}) (err error) {
 	if err != nil {
 		return
 	}
-
+	if err = db.AutoMigrator(db.models...); err != nil {
+		return
+	}
 	return
 }
 

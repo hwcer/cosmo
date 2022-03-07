@@ -8,6 +8,7 @@ import (
 
 // Config GORM config
 type Config struct {
+	models    []interface{}
 	Schema    *schema.Store
 	Logger    logger.Interface
 	Plugins   map[string]Plugin
@@ -25,4 +26,9 @@ func (c *Config) AfterInitialize(db *DB) error {
 		}
 	}
 	return nil
+}
+
+//Register 预注册的MODEL在启动时会自动创建索引
+func (c *Config) Register(model interface{}) {
+	c.models = append(c.models, model)
 }
