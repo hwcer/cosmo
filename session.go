@@ -2,7 +2,7 @@ package cosmo
 
 import (
 	"context"
-	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/cosgo/library/logger"
 	"time"
 )
 
