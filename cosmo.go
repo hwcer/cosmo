@@ -95,8 +95,11 @@ func (db *DB) Session(session *Session) *DB {
 	return tx
 }
 
-//新数据库
+//Database 新数据库
 func (db *DB) Database(dbname string) *DB {
+	if db.dbname == "" {
+		db.dbname = dbname
+	}
 	return db.Session(&Session{DBName: dbname})
 }
 func (db *DB) Collection(model interface{}) (tx *DB, coll *mongo.Collection) {
