@@ -12,9 +12,9 @@ type Role struct {
 }
 
 func TestCosmo(t *testing.T) {
-	db := New("hwc")
+	db := New()
 	var err error
-	if err = db.Start("10.26.17.20:27017"); err != nil {
+	if err = db.Start("hwc", "10.26.17.20:27017"); err != nil {
 		t.Logf("%v", err)
 		return
 	}

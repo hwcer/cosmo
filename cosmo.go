@@ -21,14 +21,13 @@ type DB struct {
 
 // New
 //address uri || *mongo.Client
-func New(dbname string, configs ...*Config) (db *DB) {
+func New(configs ...*Config) (db *DB) {
 	var config *Config
 	if len(configs) > 0 {
 		config = configs[0]
 	} else {
 		config = &Config{}
 	}
-	config.dbname = dbname
 
 	if config.Schema == nil {
 		config.Schema = schema.New(&sync.Map{}, &schema.NamingStrategy{})
@@ -49,7 +48,8 @@ func New(dbname string, configs ...*Config) (db *DB) {
 	return
 }
 
-func (db *DB) Start(address interface{}) (err error) {
+func (db *DB) Start(dbname string, address interface{}) (err error) {
+	db.dbname = dbname
 	switch address.(type) {
 	case string:
 		db.Config.client, err = NewClient(address.(string))
@@ -97,9 +97,6 @@ func (db *DB) Session(session *Session) *DB {
 
 //Database 新数据库
 func (db *DB) Database(dbname string) *DB {
-	if db.dbname == "" {
-		db.dbname = dbname
-	}
 	return db.Session(&Session{DBName: dbname})
 }
 func (db *DB) Collection(model interface{}) (tx *DB, coll *mongo.Collection) {
