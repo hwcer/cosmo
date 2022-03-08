@@ -23,7 +23,7 @@ type IndexOption struct {
 func (schema *Schema) ParseIndexes() map[string]Index {
 	indexes := map[string]Index{}
 	for _, field := range schema.Fields {
-		if field.TagSettings["INDEX"] != "" || field.TagSettings["UNIQUEINDEX"] != "" {
+		if _, ok := field.TagSettings["INDEX"]; ok {
 			for _, index := range parseFieldIndexes(field) {
 				idx := indexes[index.Name]
 				idx.Name = index.Name
@@ -68,7 +68,7 @@ func parseFieldIndexes(field *Field) (indexes []Index) {
 		if value != "" {
 			v := strings.Split(value, ":")
 			k := strings.TrimSpace(strings.ToUpper(v[0]))
-			if k == "INDEX" || k == "UNIQUEINDEX" {
+			if k == "INDEX" {
 				var (
 					name     string
 					tag      = strings.Join(v[1:], ":")
