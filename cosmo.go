@@ -67,6 +67,13 @@ func (db *DB) Start(dbname string, address interface{}) (err error) {
 	return
 }
 
+func (db *DB) Close() (err error) {
+	if db.client != nil {
+		err = db.client.Disconnect(context.Background())
+	}
+	return
+}
+
 // Session create new db session
 func (db *DB) Session(session *Session) *DB {
 	var (
