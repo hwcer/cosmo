@@ -2,7 +2,6 @@ package cosmo
 
 import (
 	"context"
-	"errors"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/schema"
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,17 +25,18 @@ type Statement struct {
 	Table        string
 	Model        interface{}
 	ReflectValue reflect.Value
-	ReflectModel reflect.Value
-	Omits        []string // omit columns
-	Selects      []string // selected columns
-	Schema       *schema.Schema
-	Context      context.Context
-	Clause       *clause.Query
-	Paging       *Paging
-	settings     map[string]interface{}
-	multiple     bool
+	//ReflectModel reflect.Value
+	Omits    []string // omit columns
+	Selects  []string // selected columns
+	Schema   *schema.Schema
+	Context  context.Context
+	Clause   *clause.Query
+	Paging   *Paging
+	settings map[string]interface{}
+	multiple bool
 }
 
+//Parse Parse model to Schema
 func (stmt *Statement) Parse() (tx *DB) {
 	tx = stmt.DB
 	if tx.Error != nil {
@@ -56,81 +56,48 @@ func (stmt *Statement) Parse() (tx *DB) {
 			return
 		}
 	}
-	if stmt.Model != nil {
-		stmt.ReflectModel = reflect.ValueOf(stmt.Model)
-		if !stmt.ReflectModel.IsValid() || reflect.Indirect(stmt.ReflectModel).Kind() != reflect.Struct {
+
+	model := stmt.Model
+	if model == nil && stmt.ReflectValue.Kind() == reflect.Struct {
+		model = stmt.ReflectValue.Interface()
+	}
+	if model != nil {
+		var err error
+		if stmt.Schema, err = tx.Schema.Parse(stmt.Model); err != nil {
 			tx.Errorf(ErrInvalidValue)
 			return
+		} else if stmt.Table == "" {
+			stmt.Table = stmt.Schema.Table
 		}
 	}
-	//fmt.Printf("Execute:%v,%+v\n", stmt.ReflectValue.Kind(), stmt.ReflectValue.Interface())
-	var err error
-	var model interface{}
-	if stmt.Model != nil {
-		model = stmt.Model
-	} else {
-		model = stmt.Dest
-	}
-	if stmt.Schema, err = tx.Schema.ParseWithSpecialTableName(model, ""); err != nil && !errors.Is(err, schema.ErrUnsupportedDataType) {
-		tx.Errorf(ErrInvalidValue)
-		return
-	} else if stmt.Schema != nil && stmt.Table == "" {
-		stmt.Table = stmt.Schema.Table
-	}
 
-	if stmt.Table == "" {
-		tx.Errorf(errors.New("Table not set, please set it like: db.Model(&user) or db.Table(\"users\")"))
-	}
 	return
 }
 
-// SetColumn set column's value
-//   stmt.SetColumn("Name", "jinzhu") // Hooks Method
-func (stmt *Statement) SetColumn(name string, value interface{}) error {
-	if stmt.Model == nil || stmt.Schema == nil || stmt.ReflectModel.Kind() != reflect.Ptr {
-		return nil
+//DBName 将对象字段转换成数据库字段
+func (stmt *Statement) DBName(name string) string {
+	if stmt.Schema == nil {
+		return name
 	}
-	if stmt.ReflectModel.Kind() != reflect.Ptr {
-		return errors.New("非指针类型无法赋值")
+	if field := stmt.Schema.LookUpField(name); field != nil {
+		return field.DBName
 	}
-	field := stmt.Schema.LookUpField(name)
-	if field == nil {
-		return ErrInvalidField
-	}
-	reflectModel := reflect.Indirect(stmt.ReflectModel)
-	return field.Set(reflectModel, value)
+	return name
 }
 
 //projection 不能同时使用Select和Omit 优先Select生效
 //可以使用model属性名或者数据库字段名
 func (stmt *Statement) projection() (projection bson.M, order bson.D, err error) {
-	fields := make(bson.M)
+	projection = make(bson.M)
 	for _, k := range stmt.Selects {
-		fields[k] = 1
+		projection[stmt.DBName(k)] = 1
 	}
 	for _, k := range stmt.Omits {
-		fields[k] = 0
+		projection[stmt.DBName(k)] = 0
 	}
-	if stmt.Schema == nil {
-		projection = fields
-		order = stmt.Paging.order
-		return
+	for _, v := range stmt.Paging.order {
+		v.Key = stmt.DBName(v.Key)
+		order = append(order, v)
 	}
-	projection = make(bson.M)
-	for k, v := range fields {
-		if field := stmt.Schema.LookUpField(k); field != nil {
-			projection[field.DBName] = v
-		} else {
-			projection[k] = v
-		}
-	}
-
-	for _, e := range stmt.Paging.order {
-		if field := stmt.Schema.LookUpField(e.Key); field != nil {
-			e.Key = field.DBName
-		}
-		order = append(order, e)
-	}
-
 	return
 }

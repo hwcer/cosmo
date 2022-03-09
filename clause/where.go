@@ -58,12 +58,6 @@ func (q *Query) fromMap(i reflect.Value) (query string, args []interface{}) {
 	return
 }
 
-//TODO
-func (q *Query) fromStruct(i interface{}) (query string, args []interface{}) {
-
-	return
-}
-
 func (q *Query) Where(format interface{}, cons ...interface{}) {
 	var args []interface{}
 	var query string
@@ -75,8 +69,6 @@ func (q *Query) Where(format interface{}, cons ...interface{}) {
 		query = format.(string)
 	case reflect.Map:
 		query, args = q.fromMap(vof)
-	case reflect.Struct:
-		query, args = q.fromStruct(vof)
 	default:
 		args = cons
 	}

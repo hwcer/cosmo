@@ -2,6 +2,7 @@ package cosmo
 
 import (
 	"github.com/hwcer/cosmo/update"
+	"reflect"
 )
 
 // Model specify the model you would like to run db operations
@@ -100,11 +101,34 @@ func (db *DB) Merge(i interface{}) error {
 	if err != nil {
 		return err
 	}
+	if err = tx.SetColumn(values[update.UpdateTypeSet]); err != nil {
+		return err
+	}
+	return nil
+}
 
-	for k, v := range values[update.UpdateTypeSet] {
-		if err = tx.Statement.SetColumn(k, v); err != nil {
-			return err
+// SetColumn set column's value
+//   stmt.SetColumn("Name", "jinzhu") // Hooks Method
+func (db *DB) SetColumn(data map[string]interface{}) error {
+	stmt := db.Statement
+	if stmt.Model == nil {
+		return nil
+	}
+
+	if stmt.Schema == nil {
+		if tx := stmt.Parse(); tx.Error != nil {
+			return tx.Error
 		}
 	}
+	reflectModel := reflect.Indirect(reflect.ValueOf(stmt.Model))
+	for k, v := range data {
+		field := stmt.Schema.LookUpField(k)
+		if field != nil {
+			if err := field.Set(reflectModel, v); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }

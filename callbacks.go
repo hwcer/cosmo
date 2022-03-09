@@ -1,6 +1,7 @@
 package cosmo
 
 import (
+	"errors"
 	"github.com/hwcer/cosmo/clause"
 	"reflect"
 )
@@ -52,13 +53,17 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 	if tx.Error != nil {
 		return
 	}
+
 	stmt := tx.Statement
+	if stmt.Table == "" {
+		tx.Errorf(errors.New("Table not set, please set it like: db.Model(&user) or db.Table(\"users\")"))
+	}
 	//dest || model 类型为Struct并且主键不为空时，设置为查询条件
 	var reflectModel reflect.Value
 	if stmt.Model != nil {
-		reflectModel = reflect.Indirect(stmt.ReflectModel)
-	} else if stmt.ReflectValue.IsValid() && stmt.ReflectValue.Kind() == reflect.Struct {
-		reflectModel = reflect.Indirect(stmt.ReflectValue)
+		reflectModel = reflect.Indirect(reflect.ValueOf(stmt.Model))
+	} else if stmt.ReflectValue.Kind() == reflect.Struct {
+		reflectModel = stmt.ReflectValue
 	}
 	if reflectModel.IsValid() {
 		field := stmt.Schema.LookUpField(clause.MongoPrimaryName)

@@ -54,7 +54,7 @@ func cmdUpdate(tx *DB) (err error) {
 		if result, err = coll.UpdateMany(tx.Statement.Context, filter, update, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
 		}
-	} else if tx.Statement.Model != nil && tx.Statement.ReflectModel.Kind() == reflect.Ptr {
+	} else if tx.Statement.Model != nil {
 		opts := options.FindOneAndUpdate()
 		if _, ok := update[MongoSetOnInsert]; ok {
 			opts.SetUpsert(true)
@@ -80,17 +80,11 @@ func cmdUpdate(tx *DB) (err error) {
 			tx.RowsAffected = result.MatchedCount
 		}
 	}
-
 	if err != nil {
 		tx.Error = err
 		return
 	}
-
-	if len(values) > 0 {
-		for k, v := range values {
-			_ = tx.Statement.SetColumn(k, v)
-		}
-	}
+	_ = tx.SetColumn(values)
 	return
 }
 
