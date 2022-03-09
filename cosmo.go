@@ -7,7 +7,6 @@ import (
 	"github.com/hwcer/cosgo/library/logger"
 	"github.com/hwcer/cosmo/schema"
 	"go.mongodb.org/mongo-driver/mongo"
-	"sync"
 )
 
 // DB GORM DB definition
@@ -30,7 +29,7 @@ func New(configs ...*Config) (db *DB) {
 	}
 
 	if config.Schema == nil {
-		config.Schema = schema.New(&sync.Map{}, &schema.NamingStrategy{})
+		config.Schema = schema.New(nil)
 	}
 
 	if config.Logger == nil {

@@ -2,7 +2,9 @@ package utils
 
 import (
 	"database/sql/driver"
+	"errors"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -17,6 +19,36 @@ func init() {
 	_, file, _, _ := runtime.Caller(0)
 	// compatible solution to get gorm source directory with various operating systems
 	gormSourceDir = regexp.MustCompile(`utils.utils\.go`).ReplaceAllString(file, "")
+}
+
+func ToBson(i interface{}) (bson.M, error) {
+	switch i.(type) {
+	case map[string]interface{}:
+		return bson.M(i.(map[string]interface{})), nil
+	case bson.M:
+		return i.(bson.M), nil
+	default:
+		return nil, errors.New("convert error")
+	}
+}
+
+func ValueOf(i interface{}) reflect.Value {
+	value, ok := i.(reflect.Value)
+	if !ok {
+		value = reflect.ValueOf(i)
+	}
+	return value
+}
+
+func ToArray(v interface{}) (r []interface{}) {
+	vf := reflect.Indirect(reflect.ValueOf(v))
+	if vf.Kind() != reflect.Array && vf.Kind() != reflect.Slice {
+		return []interface{}{v}
+	}
+	for i := 0; i < vf.Len(); i++ {
+		r = append(r, vf.Index(i).Interface())
+	}
+	return
 }
 
 // FileWithLineNum return the file name and line number of the current file

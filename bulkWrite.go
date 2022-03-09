@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/hwcer/cosmo/clause"
-	"go.mongodb.org/mongo-driver/bson"
+	update2 "github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -30,15 +30,15 @@ func (this *BulkWrite) Save() (result *mongo.BulkWriteResult, err error) {
 	return
 }
 
-func (this *BulkWrite) Update(data bson.M, where ...interface{}) {
+func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	update, _ := this.tx.parseMap(data)
+	update, _ := update2.Build(data, this.tx.Schema, nil)
 
 	model := mongo.NewUpdateOneModel()
-	model.SetFilter(query.Build())
+	model.SetFilter(query.Build(this.tx.Statement.Schema))
 	model.SetUpdate(update)
-	if _, ok := update[clause.UpdateTypesetOnInsert]; ok {
+	if _, ok := update[update2.UpdateTypeSetOnInsert]; ok {
 		model.SetUpsert(true)
 	}
 	this.models = append(this.models, model)
@@ -55,7 +55,7 @@ func (this *BulkWrite) Insert(documents ...interface{}) {
 func (this *BulkWrite) Delete(where ...interface{}) {
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	filter := query.Build()
+	filter := query.Build(this.tx.Statement.Schema)
 	multiple := clause.Multiple(filter)
 
 	if multiple {

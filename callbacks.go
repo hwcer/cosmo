@@ -46,7 +46,7 @@ func (cs *callbacks) Delete() *processor {
 }
 
 //Execute 执行操作
-//  handle func(tx *DB,query bson.M) error
+//  handle func(tx *DB,query BuildUpdate.M) error
 func (p *processor) Execute(db *DB) (tx *DB) {
 	tx = db.Statement.Parse()
 	if tx.Error != nil {

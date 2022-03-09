@@ -86,7 +86,7 @@ func parseFieldIndexes(field *Field) (indexes []Index) {
 				}
 
 				if name == "" {
-					name = field.Schema.namer.IndexName(field.Schema.Table, field.Name)
+					name = strings.Join([]string{"idx", field.DBName}, "-")
 				}
 
 				//if (k == "UNIQUEINDEX") || settings["UNIQUE"] != "" {

@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	MongoTagName     = "bson"
+	MongoTagName     = "BuildUpdate"
 	MongoPrimaryKey  = "_id"
 	MongoSetOnInsert = "$setOnInsert"
 )

@@ -2,7 +2,6 @@ package clause
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
 	"strings"
 )
@@ -121,22 +120,10 @@ func (q *Query) Where(format interface{}, cons ...interface{}) {
 		}
 	}
 	if whereType == QueryOperationAND {
-		for _, node := range nodes {
-			if node.k == MongoPrimaryName && node.t == QueryOperationPrefix {
-				q.Primary(node.v)
-			} else {
-				q.where = append(q.where, node)
-			}
-		}
-		return
+		q.where = append(q.where, nodes...)
+	} else {
+		q.match(whereType, nodes...)
 	}
-	var con []interface{}
-	for _, node := range nodes {
-		c := make(bson.M)
-		build(c, node)
-		con = append(con, c)
-	}
-	q.match(whereType, con)
 }
 
 func parseWherePair(pair string, w string, v interface{}) *Node {
@@ -155,10 +142,7 @@ func parseWherePair(pair string, w string, v interface{}) *Node {
 	if r == "?" {
 		r = v
 	}
-	node.v = parseArray(r)
-	if node.t == QueryOperationPrefix && len(node.v) > 1 {
-		node.t = "$in"
-	}
+	node.v = r
 	//fmt.Printf("parseWherePair node: %+v \n", node)
 	return node
 }

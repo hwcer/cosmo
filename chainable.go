@@ -1,5 +1,9 @@
 package cosmo
 
+import (
+	"github.com/hwcer/cosmo/update"
+)
+
 // Model specify the model you would like to run db operations
 //    // update all users's name to `hello`
 //    db.Model(&User{}).Update("name", "hello")
@@ -56,22 +60,6 @@ func (db *DB) Where(query interface{}, args ...interface{}) (tx *DB) {
 	return
 }
 
-//
-//// Not add NOT conditions
-func (db *DB) Not(query interface{}) (tx *DB) {
-	tx = db.getInstance()
-	tx.Statement.Clause.NOT(query)
-	return
-}
-
-//
-//// Or add OR conditions
-func (db *DB) Or(query interface{}) (tx *DB) {
-	tx = db.getInstance()
-	tx.Statement.Clause.OR(query)
-	return
-}
-
 // Page 分页设置 page-当前页，size-每页大小
 func (db *DB) Page(page, size int) (tx *DB) {
 	tx = db.getInstance()
@@ -98,4 +86,25 @@ func (db *DB) Offset(offset int) (tx *DB) {
 	tx = db.getInstance()
 	tx.Statement.Paging.Offset(offset)
 	return
+}
+
+// Merge 只更新Model,不会修改数据库
+// db.Model(m).Merge(i)
+//参数支持 Struct,map[string]interface{}
+func (db *DB) Merge(i interface{}) error {
+	tx := db.Statement.Parse()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	values, err := update.Build(i, db.Schema, db.Statement.Model)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range values[update.UpdateTypeSet] {
+		if err = tx.Statement.SetColumn(k, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }

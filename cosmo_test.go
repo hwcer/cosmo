@@ -6,7 +6,7 @@ import (
 )
 
 type Role struct {
-	Id    string `bson:"_id" gorm:"column:_id;primaryKey"`
+	Id    string `BuildUpdate:"_id" gorm:"column:_id;primaryKey"`
 	Name  string `gorm:"index:idx_name,sort:desc;index:,unique"`
 	Login int64  `gorm:"index:idx_name,sort:asc;index:,sparse"`
 }

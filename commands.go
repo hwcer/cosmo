@@ -2,6 +2,7 @@ package cosmo
 
 import (
 	"github.com/hwcer/cosmo/clause"
+	update2 "github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -32,15 +33,15 @@ func cmdCreate(tx *DB) (err error) {
 }
 
 //Update 通用更新
-// map ,bson.m 支持 $set $incr $setOnInsert, 其他未使用$字段一律视为$set操作
+// map ,BuildUpdate.m 支持 $set $incr $setOnInsert, 其他未使用$字段一律视为$set操作
 //支持struct 保存所有非零值
 func cmdUpdate(tx *DB) (err error) {
-	var update bson.M
-	if update, err = tx.bson(tx.Statement.Dest); err != nil {
+	var update update2.Update
+	if update, err = update2.Build(tx.Statement.Dest, tx.Schema, tx.Statement.Model); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)
-	filter := tx.Statement.Clause.Build()
+	filter := tx.Statement.Clause.Build(tx.Statement.Schema)
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
@@ -95,7 +96,7 @@ func cmdUpdate(tx *DB) (err error) {
 
 // Delete delete value match given conditions, if the value has primary key, then will including the primary key as condition
 func cmdDelete(tx *DB) (err error) {
-	filter := tx.Statement.Clause.Build()
+	filter := tx.Statement.Clause.Build(tx.Statement.Schema)
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
@@ -115,10 +116,10 @@ func cmdDelete(tx *DB) (err error) {
 //Find find records that match given conditions
 //dest must be a pointer to a slice
 func cmdQuery(tx *DB) (err error) {
-	filter := tx.Statement.Clause.Build()
+	filter := tx.Statement.Clause.Build(tx.Statement.Schema)
 
 	//b, _ := json.Marshal(filter)
-	//fmt.Printf("Query Filter:%+v\n", string(b))
+	//fmt.Printf("Filter Filter:%+v\n", string(b))
 	var multiple bool
 	switch tx.Statement.ReflectValue.Kind() {
 	case reflect.Array, reflect.Slice:

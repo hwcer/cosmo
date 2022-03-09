@@ -11,12 +11,7 @@ import (
 // Namer namer interface
 type Namer interface {
 	TableName(table string) string
-	//SchemaName(table string) string
 	ColumnName(table, column string) string
-	//JoinTableName(joinTable string) string
-	//RelationshipFKName(Relationship) string
-	//CheckerName(table, column string) string
-	IndexName(table, column string) string
 }
 
 // Replacer replacer interface like strings.Replacer
@@ -44,11 +39,6 @@ func (ns NamingStrategy) TableName(str string) string {
 // ColumnName convert string to column name
 func (ns NamingStrategy) ColumnName(table, column string) string {
 	return ns.toDBName(column)
-}
-
-// IndexName generate index name
-func (ns NamingStrategy) IndexName(table, column string) string {
-	return ns.formatName("idx", table, ns.toDBName(column))
 }
 
 func (ns NamingStrategy) formatName(prefix, table, name string) string {
