@@ -56,14 +56,13 @@ func (stmt *Statement) Parse() (tx *DB) {
 			return
 		}
 	}
-
-	model := stmt.Model
-	if model == nil && stmt.ReflectValue.Kind() == reflect.Struct {
-		model = stmt.ReflectValue.Interface()
-	}
-	if model != nil {
+	if stmt.Table == "" {
+		model := stmt.Model
+		if model == nil {
+			model = stmt.Dest
+		}
 		var err error
-		if stmt.Schema, err = tx.Schema.Parse(stmt.Model); err != nil {
+		if stmt.Schema, err = tx.Schema.Parse(model); err != nil {
 			tx.Errorf(ErrInvalidValue)
 			return
 		} else if stmt.Table == "" {

@@ -13,6 +13,10 @@ const (
 	UpdateTypeSetOnInsert = "$setOnInsert"
 )
 
+func New() Update {
+	return make(Update)
+}
+
 type Update map[string]bson.M
 
 func (u Update) Has(filed string) bool {
