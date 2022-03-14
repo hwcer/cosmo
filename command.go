@@ -111,7 +111,6 @@ func cmdDelete(tx *DB) (err error) {
 //dest must be a pointer to a slice
 func cmdQuery(tx *DB) (err error) {
 	filter := tx.Statement.Clause.Build(tx.Statement.Schema)
-
 	//b, _ := json.Marshal(filter)
 	//fmt.Printf("Filter Filter:%+v\n", string(b))
 	var multiple bool

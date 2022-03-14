@@ -43,7 +43,7 @@ func (q *Query) Primary(v interface{}) {
 	q.Eq(MongoPrimaryName, v)
 }
 
-func (q *Query) any(t, k string, v ...interface{}) {
+func (q *Query) any(t, k string, v interface{}) {
 	if !strings.HasPrefix(t, QueryOperationPrefix) {
 		t = QueryOperationPrefix + t
 	}
