@@ -27,6 +27,11 @@ func (schema Schema) String() string {
 	return fmt.Sprintf("%s.%s", schema.ModelType.PkgPath(), schema.ModelType.Name())
 }
 
+func (schema Schema) New() reflect.Value {
+	results := reflect.New(reflect.PtrTo(schema.ModelType))
+	return results
+}
+
 func (schema Schema) MakeSlice() reflect.Value {
 	slice := reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(schema.ModelType)), 0, 20)
 	results := reflect.New(slice.Type())
