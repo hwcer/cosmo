@@ -56,7 +56,7 @@ func (stmt *Statement) Parse() (tx *DB) {
 			return
 		}
 	}
-	if stmt.Table == "" {
+	if stmt.Table == "" || stmt.Model != nil {
 		model := stmt.Model
 		if model == nil {
 			model = stmt.Dest
