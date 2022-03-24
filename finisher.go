@@ -7,7 +7,7 @@ import "reflect"
 func (db *DB) Find(dest interface{}, conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
-		db.Where(conds[0], conds[1:]...)
+		tx = db.Where(conds[0], conds[1:]...)
 	}
 	tx.Statement.Dest = dest
 	return tx.callbacks.Query().Execute(tx)
@@ -29,8 +29,11 @@ func (db *DB) Create(value interface{}) (tx *DB) {
 //db.Model(&User{}).Where(1).Update(BuildUpdate.M)  匹配 _id=1,更新bson.M中的所有值
 //db.Model(&User{}).Where("name = ?","myname").Update(BuildUpdate.M)  匹配 name=myname,更新bson.M中的所有值
 
-func (db *DB) Update(values interface{}) (tx *DB) {
+func (db *DB) Update(values interface{}, conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
+	if len(conds) > 0 {
+		tx = tx.Where(conds[0], conds[1:]...)
+	}
 	tx.Statement.Dest = values
 	return tx.callbacks.Update().Execute(tx)
 }
@@ -52,8 +55,11 @@ func (db *DB) Delete(value interface{}, conds ...interface{}) (tx *DB) {
 }
 
 // Count 统计文档数
-func (db *DB) Count(count *int64) (tx *DB) {
+func (db *DB) Count(count *int64, conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
+	if len(conds) > 0 {
+		tx = tx.Where(conds[0], conds[1:]...)
+	}
 	tx.Statement.Dest = count
 	return tx.Statement.callbacks.Call(tx, func(db *DB) (err error) {
 		coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)

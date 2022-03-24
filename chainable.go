@@ -111,16 +111,20 @@ func (db *DB) Merge(i interface{}) error {
 //   stmt.SetColumn("Name", "jinzhu") // Hooks Method
 func (db *DB) SetColumn(data map[string]interface{}) error {
 	stmt := db.Statement
-	if stmt.Model == nil {
+	if stmt.Model == nil || stmt.Schema == nil {
+		return nil
+	}
+	reflectModel := reflect.Indirect(reflect.ValueOf(stmt.Model))
+	if !reflectModel.IsValid() || reflectModel.IsZero(){
 		return nil
 	}
 
-	if stmt.Schema == nil {
-		if tx := stmt.Parse(); tx.Error != nil {
-			return tx.Error
-		}
-	}
-	reflectModel := reflect.Indirect(reflect.ValueOf(stmt.Model))
+	//if stmt.Schema == nil {
+	//	if tx := stmt.Parse(); tx.Error != nil {
+	//		return tx.Error
+	//	}
+	//}
+
 	for k, v := range data {
 		field := stmt.Schema.LookUpField(k)
 		if field != nil {

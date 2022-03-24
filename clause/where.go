@@ -2,6 +2,7 @@ package clause
 
 import (
 	"fmt"
+	"github.com/hwcer/cosmo/utils"
 	"reflect"
 	"strings"
 )
@@ -75,7 +76,7 @@ func (q *Query) Where(format interface{}, cons ...interface{}) {
 	//query 非查询语句时，使用主键匹配
 	if !IsQueryFormat(query) {
 		query = MongoPrimaryName + " = ?"
-		args = append([]interface{}{format}, args...)
+		args = append(utils.ToArray(format), args...)
 	}
 
 	var arr []string

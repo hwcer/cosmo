@@ -112,7 +112,7 @@ func cmdDelete(tx *DB) (err error) {
 func cmdQuery(tx *DB) (err error) {
 	filter := tx.Statement.Clause.Build(tx.Statement.Schema)
 	//b, _ := json.Marshal(filter)
-	//fmt.Printf("Filter Filter:%+v\n", string(b))
+	//fmt.Printf("Query Filter:%+v\n", string(b))
 	var multiple bool
 	switch tx.Statement.ReflectValue.Kind() {
 	case reflect.Array, reflect.Slice:
