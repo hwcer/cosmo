@@ -34,6 +34,9 @@ func Build(i interface{}, store *schema.Store, model interface{}) (update Update
 	}
 	//setOnInsert
 	reflectModel := reflect.Indirect(utils.ValueOf(model))
+	if !reflectModel.IsValid() || reflectModel.IsZero(){
+		return
+	}
 	for _, field := range schemaModel.Fields {
 		if field.DBName == clause.MongoPrimaryName || update.Has(field.DBName) {
 			continue
