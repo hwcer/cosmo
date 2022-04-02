@@ -29,7 +29,7 @@ func Build(i interface{}, store *schema.Store, model interface{}) (update Update
 	default:
 		err = errors.New("类型错误")
 	}
-	if err != nil || model != nil {
+	if err != nil || model == nil {
 		return
 	}
 	//setOnInsert

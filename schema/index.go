@@ -63,7 +63,7 @@ func (schema *Schema) LookIndex(name string) *Index {
 	return nil
 }
 
-func (schema *Schema)parseFieldIndexes(field *Field) (indexes []Index) {
+func (schema *Schema) parseFieldIndexes(field *Field) (indexes []Index) {
 	for _, value := range strings.Split(field.Tag.Get("gorm"), ";") {
 		if value != "" {
 			v := strings.Split(value, ":")
@@ -85,9 +85,9 @@ func (schema *Schema)parseFieldIndexes(field *Field) (indexes []Index) {
 					name = tag[0:idx]
 				}
 
-				//if name == "" {
-				//	name = strings.Join([]string{"idx",schema.Table,  field.DBName}, "-")
-				//}
+				if name == "" {
+					name = strings.Join([]string{"idx", schema.Table, field.DBName}, "-")
+				}
 
 				//if (k == "UNIQUEINDEX") || settings["UNIQUE"] != "" {
 				//	settings["CLASS"] = "UNIQUE"
