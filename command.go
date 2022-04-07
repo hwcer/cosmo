@@ -48,13 +48,15 @@ func cmdUpdate(tx *DB) (err error) {
 	//fmt.Printf("Update filter:%+v\n", filter)
 	coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
 	values := make(map[string]interface{})
+	reflectModel := reflect.Indirect(reflect.ValueOf(tx.Statement.Model))
+
 	if tx.Statement.multiple || clause.Multiple(filter) {
 		opts := options.Update()
 		var result *mongo.UpdateResult
 		if result, err = coll.UpdateMany(tx.Statement.Context, filter, update, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
 		}
-	} else if tx.Statement.Model != nil {
+	} else if reflectModel.IsValid() {
 		opts := options.FindOneAndUpdate()
 		if _, ok := update[MongoSetOnInsert]; ok {
 			opts.SetUpsert(true)

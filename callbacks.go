@@ -59,12 +59,12 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 	}
 	//dest || model 类型为Struct并且主键不为空时，设置为查询条件
 	var reflectModel reflect.Value
-	if stmt.Model !=nil{
-		reflectModel =  reflect.Indirect(reflect.ValueOf(stmt.Model))
-	}else if  stmt.ReflectValue.Kind() == reflect.Struct {
+	if stmt.Model != nil {
+		reflectModel = reflect.Indirect(reflect.ValueOf(stmt.Model))
+	} else if stmt.ReflectValue.Kind() == reflect.Struct {
 		reflectModel = stmt.ReflectValue
 	}
-	if reflectModel.IsValid() && !reflectModel.IsZero(){
+	if reflectModel.IsValid() && !reflectModel.IsZero() {
 		field := stmt.Schema.LookUpField(clause.MongoPrimaryName)
 		if field != nil {
 			v := reflectModel.FieldByIndex(field.StructField.Index)

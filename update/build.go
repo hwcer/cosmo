@@ -2,6 +2,7 @@ package update
 
 import (
 	"errors"
+	"fmt"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/schema"
 	"github.com/hwcer/cosmo/utils"
@@ -27,14 +28,14 @@ func Build(i interface{}, store *schema.Store, model interface{}) (update Update
 	case reflect.Struct:
 		update, err = parseStruct(reflectValue, store)
 	default:
-		err = errors.New("类型错误")
+		err = fmt.Errorf("类型错误:%v", reflectValue.Kind())
 	}
 	if err != nil || model == nil {
 		return
 	}
 	//setOnInsert
 	reflectModel := reflect.Indirect(utils.ValueOf(model))
-	if !reflectModel.IsValid() || reflectModel.IsZero(){
+	if !reflectModel.IsValid() || reflectModel.IsZero() {
 		return
 	}
 	for _, field := range schemaModel.Fields {
@@ -56,6 +57,8 @@ func parseMap(dest interface{}, sch *schema.Schema) (update Update, err error) {
 		destMap = bson.M(dest.(map[string]interface{}))
 	case bson.M:
 		destMap = dest.(bson.M)
+	case Update:
+		return dest.(Update), nil //TODO
 	default:
 		err = errors.New("Update方法参数仅支持 struct 和 map[string]interface{}")
 	}
