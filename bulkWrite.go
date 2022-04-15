@@ -2,7 +2,6 @@ package cosmo
 
 import (
 	"context"
-	"errors"
 	"github.com/hwcer/cosmo/clause"
 	update2 "github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,7 +16,7 @@ type BulkWrite struct {
 
 func (this *BulkWrite) Save() (result *mongo.BulkWriteResult, err error) {
 	if len(this.models) == 0 {
-		return nil, errors.New("ErrorWriteModelEmpty")
+		return nil, nil
 	}
 	tx := this.tx.callbacks.Call(this.tx, func(db *DB) error {
 		coll := db.client.Database(db.dbname).Collection(db.Statement.Table)

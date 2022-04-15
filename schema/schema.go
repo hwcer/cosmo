@@ -28,7 +28,7 @@ func (schema Schema) String() string {
 }
 
 func (schema Schema) New() reflect.Value {
-	results := reflect.New(reflect.PtrTo(schema.ModelType))
+	results := reflect.New(schema.ModelType)
 	return results
 }
 
