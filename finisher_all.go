@@ -80,9 +80,9 @@ package cosmo
 ////初始化dest 并且将结果写入到数据
 //func (db *DB) FirstOrCreate(dest interface{}, conds ...interface{}) (tx *DB) {
 //	queryTx := db.Limit(1).Order(clause.OrderByColumn{
-//		Column: clause.Column{Table: clause.CurrentTable, Name: clause.PrimaryKey},
+//		Column: clause.Column{Model: clause.CurrentTable, Name: clause.PrimaryKey},
 //	})
-//	if tx = queryTx.Find(dest, conds...); tx.Error == nil {
+//	if tx = queryTx.Find(dest, conds...); tx.errMsg == nil {
 //		if tx.RowsAffected == 0 {
 //			if c, ok := tx.Statement.Clauses["WHERE"]; ok {
 //				if where, ok := c.Expression.(clause.Where); ok {

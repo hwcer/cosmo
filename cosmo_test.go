@@ -20,7 +20,7 @@ func TestCosmo(t *testing.T) {
 	}
 
 	//if err := db.AutoMigrator(&Role{}); err != nil {
-	//	t.Logf("AutoMigrator Error:%v", err)
+	//	t.Logf("AutoMigrator errMsg:%v", err)
 	//}
 
 	t.Logf("================Find=====================")

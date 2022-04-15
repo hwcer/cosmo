@@ -2,7 +2,10 @@ module github.com/hwcer/cosmo
 
 go 1.17
 
-replace github.com/hwcer/cosmo v0.0.0 => ./
+replace (
+	github.com/hwcer/cosgo v0.0.0 => ../cosgo
+	github.com/hwcer/cosmo v0.0.0 => ./cosmo
+)
 
 require (
 	github.com/hwcer/cosgo v0.0.0-20220307062447-d550e177fcb4

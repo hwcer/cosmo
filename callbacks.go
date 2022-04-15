@@ -55,7 +55,7 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 
 	stmt := tx.Statement
 	if stmt.Table == "" {
-		tx.Errorf("Table not set, please set it like: db.Model(&user) or db.Table(\"users\") %+v")
+		tx.Errorf("Model not set, please set it like: db.Model(&user) or db.Model(\"users\") %+v")
 	}
 	//dest || model 类型为Struct并且主键不为空时，设置为查询条件
 	var reflectModel reflect.Value
