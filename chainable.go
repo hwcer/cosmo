@@ -115,13 +115,13 @@ func (db *DB) SetColumn(data map[string]interface{}) error {
 		return nil
 	}
 	reflectModel := reflect.Indirect(reflect.ValueOf(stmt.Model))
-	if !reflectModel.IsValid() || reflectModel.IsZero() {
+	if !reflectModel.IsValid() || reflectModel.IsZero(){
 		return nil
 	}
 
 	//if stmt.Schema == nil {
-	//	if tx := stmt.parseAct(); tx.errMsg != nil {
-	//		return tx.errMsg
+	//	if tx := stmt.Parse(); tx.Error != nil {
+	//		return tx.Error
 	//	}
 	//}
 
