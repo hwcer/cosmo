@@ -11,7 +11,7 @@ import (
 //    // if user's primary key is non-blank, will use it as condition, then will only update the user's name to `hello`
 //    db.Model(&user).Update("name", "hello")
 func (db *DB) Model(value interface{}) (tx *DB) {
-	tx = db.getInstance(true)
+	tx = db.getInstance()
 	tx.Statement.Model = value
 	return
 }
@@ -19,7 +19,7 @@ func (db *DB) Model(value interface{}) (tx *DB) {
 // Table specify the table you would like to run db operations
 //使用TABLE 时select,order,Omit 中必须使用数据库字段名称
 func (db *DB) Table(name string) (tx *DB) {
-	tx = db.getInstance(true)
+	tx = db.getInstance()
 	tx.Statement.Table = name
 	return
 }
@@ -97,7 +97,7 @@ func (db *DB) Merge(i interface{}) error {
 	if tx.Error != nil {
 		return tx.Error
 	}
-	values, err := update.Build(i, db.Schema, db.Statement.Model)
+	values, err := update.Build(i, Schema, db.Statement.Model)
 	if err != nil {
 		return err
 	}
@@ -115,12 +115,12 @@ func (db *DB) SetColumn(data map[string]interface{}) error {
 		return nil
 	}
 	reflectModel := reflect.Indirect(reflect.ValueOf(stmt.Model))
-	if !reflectModel.IsValid() || reflectModel.IsZero(){
+	if !reflectModel.IsValid() || reflectModel.IsZero() {
 		return nil
 	}
 
 	//if stmt.Schema == nil {
-	//	if tx := stmt.Parse(); tx.Error != nil {
+	//	if tx := stmt.ParseId(); tx.Error != nil {
 	//		return tx.Error
 	//	}
 	//}

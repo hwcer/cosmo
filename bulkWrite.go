@@ -32,7 +32,7 @@ func (this *BulkWrite) Save() (result *mongo.BulkWriteResult, err error) {
 func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	update, _ := update2.Build(data, this.tx.Schema, nil)
+	update, _ := update2.Build(data, Schema, nil)
 
 	model := mongo.NewUpdateOneModel()
 	model.SetFilter(query.Build(this.tx.Statement.Schema))

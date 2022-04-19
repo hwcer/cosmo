@@ -6,10 +6,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+var Schema = schema.New()
+
 // Config GORM config
 type Config struct {
-	models    []interface{}
-	Schema    *schema.Store
+	models []interface{}
+
 	Logger    logger.Interface
 	Plugins   map[string]Plugin
 	dbname    string

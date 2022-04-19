@@ -8,27 +8,23 @@ import (
 	"sync"
 )
 
-//New 新封装schema store namer
-func New(namer Namer) (i *Store) {
-	if namer == nil {
-		namer = &NamingStrategy{}
-	}
-	i = &Store{store: &sync.Map{}, namer: namer}
-	return i
+//New 新封装schema Store Namer
+func New() (i *Options) {
+	return &Options{Store: &sync.Map{}, Namer: &NamingStrategy{}}
 }
 
-type Store struct {
-	store *sync.Map
-	namer Namer
+type Options struct {
+	Namer Namer
+	Store *sync.Map
 }
 
 // Parse get data type from dialector
-func (this *Store) Parse(dest interface{}) (*Schema, error) {
+func (this *Options) Parse(dest interface{}) (*Schema, error) {
 	return this.ParseWithSpecialTableName(dest, "")
 }
 
 // ParseWithSpecialTableName get data type from dialector with extra schema table
-func (this *Store) ParseWithSpecialTableName(dest interface{}, specialTableName string) (*Schema, error) {
+func (this *Options) ParseWithSpecialTableName(dest interface{}, specialTableName string) (*Schema, error) {
 	if dest == nil {
 		return nil, fmt.Errorf("%w: %+v", ErrUnsupportedDataType, dest)
 	}
@@ -66,7 +62,7 @@ func (this *Store) ParseWithSpecialTableName(dest interface{}, specialTableName 
 		initialized: make(chan struct{}),
 	}
 	// Load exist schmema cache, return if exists
-	if v, loaded := this.store.LoadOrStore(schemaCacheKey, schema); loaded {
+	if v, loaded := this.Store.LoadOrStore(schemaCacheKey, schema); loaded {
 		s := v.(*Schema)
 		<-s.initialized
 		return s, s.err
@@ -75,7 +71,7 @@ func (this *Store) ParseWithSpecialTableName(dest interface{}, specialTableName 
 	}
 
 	modelValue := reflect.New(modelType)
-	tableName := this.namer.TableName(modelType.Name())
+	tableName := this.Namer.TableName(modelType.Name())
 	if tabler, ok := modelValue.Interface().(Tabler); ok {
 		tableName = tabler.TableName()
 	}
@@ -101,7 +97,7 @@ func (this *Store) ParseWithSpecialTableName(dest interface{}, specialTableName 
 
 	for _, field := range schema.Fields {
 		if field.DBName == "" {
-			field.DBName = this.namer.ColumnName(schema.Table, field.Name)
+			field.DBName = this.Namer.ColumnName(schema.Table, field.Name)
 		}
 
 		if field.DBName != "" {
@@ -121,7 +117,7 @@ func (this *Store) ParseWithSpecialTableName(dest interface{}, specialTableName 
 
 	defer func() {
 		if schema.err != nil {
-			this.store.Delete(modelType)
+			this.Store.Delete(modelType)
 		}
 	}()
 	return schema, schema.err

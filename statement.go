@@ -62,7 +62,7 @@ func (stmt *Statement) Parse() (tx *DB) {
 			model = stmt.Dest
 		}
 		var err error
-		if stmt.Schema, err = tx.Schema.Parse(model); err != nil {
+		if stmt.Schema, err = Schema.Parse(model); err != nil {
 			tx.Errorf(ErrInvalidValue)
 			return
 		} else if stmt.Table == "" {

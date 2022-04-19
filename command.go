@@ -37,7 +37,7 @@ func cmdCreate(tx *DB) (err error) {
 //支持struct 保存所有非零值
 func cmdUpdate(tx *DB) (err error) {
 	var update update2.Update
-	if update, err = update2.Build(tx.Statement.Dest, tx.Schema, tx.Statement.Model); err != nil {
+	if update, err = update2.Build(tx.Statement.Dest, Schema, tx.Statement.Model); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)
@@ -142,7 +142,8 @@ func cmdQuery(tx *DB) (err error) {
 		if len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
-		if result := coll.FindOne(tx.Statement.Context, filter, opts); result.Err() == nil {
+		result := coll.FindOne(tx.Statement.Context, filter, opts)
+		if result.Err() == nil {
 			if err = result.Decode(tx.Statement.Dest); err == nil {
 				tx.RowsAffected = 1
 			}

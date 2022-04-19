@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo/library/logger"
-	"github.com/hwcer/cosmo/schema"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -26,10 +25,6 @@ func New(configs ...*Config) (db *DB) {
 		config = configs[0]
 	} else {
 		config = &Config{}
-	}
-
-	if config.Schema == nil {
-		config.Schema = schema.New(nil)
 	}
 
 	if config.Logger == nil {
@@ -166,8 +161,8 @@ func (db *DB) Errorf(msg interface{}, args ...interface{}) error {
 	return db.Error
 }
 
-func (db *DB) getInstance(clone ...bool) *DB {
-	if len(clone) == 0 && db.clone {
+func (db *DB) getInstance() *DB {
+	if db.clone {
 		return db
 	}
 	tx := &DB{Config: db.Config, clone: true}

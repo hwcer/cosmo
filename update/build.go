@@ -14,7 +14,7 @@ import (
 //Build 使用当前模型，将map bson.m Struct 转换成Update
 // 如果设置了model,model除主键和零值外其他键值一律作为SetOnInsert值
 // 如果设置了model i为bson.m可以使用数据库名和model名
-func Build(i interface{}, store *schema.Store, model interface{}) (update Update, err error) {
+func Build(i interface{}, store *schema.Options, model interface{}) (update Update, err error) {
 	var schemaModel *schema.Schema
 	if model != nil {
 		if schemaModel, err = store.Parse(model); err != nil {
@@ -82,7 +82,7 @@ func parseMap(dest interface{}, sch *schema.Schema) (update Update, err error) {
 	return
 }
 
-func parseStruct(reflectValue reflect.Value, store *schema.Store) (update Update, err error) {
+func parseStruct(reflectValue reflect.Value, store *schema.Options) (update Update, err error) {
 	var destSchema *schema.Schema
 	if destSchema, err = store.Parse(reflectValue); err != nil {
 		return

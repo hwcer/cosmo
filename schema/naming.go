@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 )
 
-// Namer namer interface
+// Namer Namer interface
 type Namer interface {
 	TableName(table string) string
 	ColumnName(table, column string) string
