@@ -43,14 +43,15 @@ func (db *DB) Update(values interface{}, conds ...interface{}) (tx *DB) {
 //db.Model(&User).Delete(1) 匹配 _id=1
 //db.Model(&User).Delete([]int{1,2,3}) 匹配 _id IN (1,2,3)
 //db.Model(&User).Delete("name = ?","myname") 匹配 name=myname
-func (db *DB) Delete(value interface{}, conds ...interface{}) (tx *DB) {
+func (db *DB) Delete(conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
-	if reflect.Indirect(reflect.ValueOf(value)).Kind() != reflect.Struct {
-		db.Where(value, conds...)
+	if len(conds) > 0 && reflect.Indirect(reflect.ValueOf(conds[0])).Kind() == reflect.Struct {
+		tx.Statement.Dest = conds[0]
+		db.Where(conds[0], conds[1:]...)
 	} else if len(conds) > 0 {
 		db.Where(conds[0], conds[1:]...)
 	}
-	tx.Statement.Dest = value
+
 	return tx.callbacks.Delete().Execute(tx)
 }
 
