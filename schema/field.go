@@ -8,10 +8,13 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/now"
 )
+
+var embeddedCacheKey = "embedded_cache_store"
 
 type DataType string
 
@@ -143,210 +146,78 @@ func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
 	} else if dbName, ok = field.TagSettings["COLUMN"]; ok {
 		field.DBName = dbName
 	}
-	//
-	//if val, ok := field.TagSettings["PRIMARYKEY"]; ok && utils.CheckTruth(val) {
-	//	field.PrimaryKey = true
-	//} else if val, ok := field.TagSettings["PRIMARY_KEY"]; ok && utils.CheckTruth(val) {
-	//	field.PrimaryKey = true
-	//}
-	//
-	//if val, ok := field.TagSettings["AUTOINCREMENT"]; ok && utils.CheckTruth(val) {
-	//	field.AutoIncrement = true
-	//	field.HasDefaultValue = true
-	//}
-	//
-	//if num, ok := field.TagSettings["AUTOINCREMENTINCREMENT"]; ok {
-	//	field.AutoIncrementIncrement, _ = strconv.ParseInt(num, 10, 64)
-	//}
 
 	if v, ok := field.TagSettings["DEFAULT"]; ok {
 		field.HasDefaultValue = true
 		field.DefaultValue = v
 	}
-	//
-	//if num, ok := field.TagSettings["SIZE"]; ok {
-	//	if field.Size, err = strconv.Atoi(num); err != nil {
-	//		field.Size = -1
-	//	}
-	//}
-	//
-	//if p, ok := field.TagSettings["PRECISION"]; ok {
-	//	field.Precision, _ = strconv.Atoi(p)
-	//}
-	//
-	//if s, ok := field.TagSettings["SCALE"]; ok {
-	//	field.Scale, _ = strconv.Atoi(s)
-	//}
-	//
-	//if val, ok := field.TagSettings["NOT NULL"]; ok && utils.CheckTruth(val) {
-	//	field.NotNull = true
-	//} else if val, ok := field.TagSettings["NOTNULL"]; ok && utils.CheckTruth(val) {
-	//	field.NotNull = true
-	//}
 
 	if val, ok := field.TagSettings["UNIQUE"]; ok && utils.CheckTruth(val) {
 		field.Unique = true
 	}
 
-	//if val, ok := field.TagSettings["COMMENT"]; ok {
-	//	field.Comment = val
-	//}
-
 	// default value is function or null or blank (primary keys)
 	field.DefaultValue = strings.TrimSpace(field.DefaultValue)
-	//skipParseDefaultValue := strings.Contains(field.DefaultValue, "(") &&
-	//	strings.Contains(field.DefaultValue, ")") || strings.ToLower(field.DefaultValue) == "null" || field.DefaultValue == ""
-	//switch reflect.Indirect(fieldValue).Kind() {
-	//case reflect.Bool:
-	//	field.DataType = Bool
-	//	if field.HasDefaultValue && !skipParseDefaultValue {
-	//		if field.DefaultValueInterface, err = strconv.ParseBool(field.DefaultValue); err != nil {
-	//			schema.err = fmt.Errorf("failed to parse %s as default value for bool, got error: %v", field.DefaultValue, err)
-	//		}
-	//	}
-	//case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-	//	field.DataType = Int
-	//	if field.HasDefaultValue && !skipParseDefaultValue {
-	//		if field.DefaultValueInterface, err = strconv.ParseInt(field.DefaultValue, 0, 64); err != nil {
-	//			schema.err = fmt.Errorf("failed to parse %s as default value for int, got error: %v", field.DefaultValue, err)
-	//		}
-	//	}
-	//case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-	//	field.DataType = Uint
-	//	if field.HasDefaultValue && !skipParseDefaultValue {
-	//		if field.DefaultValueInterface, err = strconv.ParseUint(field.DefaultValue, 0, 64); err != nil {
-	//			schema.err = fmt.Errorf("failed to parse %s as default value for uint, got error: %v", field.DefaultValue, err)
-	//		}
-	//	}
-	//case reflect.Float32, reflect.Float64:
-	//	field.DataType = Float
-	//	if field.HasDefaultValue && !skipParseDefaultValue {
-	//		if field.DefaultValueInterface, err = strconv.ParseFloat(field.DefaultValue, 64); err != nil {
-	//			schema.err = fmt.Errorf("failed to parse %s as default value for float, got error: %v", field.DefaultValue, err)
-	//		}
-	//	}
-	//case reflect.String:
-	//	field.DataType = String
-	//
-	//	if field.HasDefaultValue && !skipParseDefaultValue {
-	//		field.DefaultValue = strings.Trim(field.DefaultValue, "'")
-	//		field.DefaultValue = strings.Trim(field.DefaultValue, `"`)
-	//		field.DefaultValueInterface = field.DefaultValue
-	//	}
-	//case reflect.Struct:
-	//	if _, ok := fieldValue.Interface().(*time.Time); ok {
-	//		field.DataType = Time
-	//	} else if fieldValue.Type().ConvertibleTo(TimeReflectType) {
-	//		field.DataType = Time
-	//	} else if fieldValue.Type().ConvertibleTo(reflect.TypeOf(&time.Time{})) {
-	//		field.DataType = Time
-	//	}
-	//case reflect.Array, reflect.Slice:
-	//	if reflect.Indirect(fieldValue).Type().Elem() == reflect.TypeOf(uint8(0)) {
-	//		field.DataType = Bytes
-	//	}
-	//}
 
-	//field.GORMDataType = field.DataType
+	// Normal anonymous field or having `EMBEDDED` tag
+	if _, ok := field.TagSettings["EMBEDDED"]; ok || (field.GORMDataType != Time && field.GORMDataType != Bytes && !isValuer &&
+		fieldStruct.Anonymous && (field.Creatable || field.Updatable || field.Readable)) {
+		kind := reflect.Indirect(fieldValue).Kind()
+		switch kind {
+		case reflect.Struct:
+			var err error
+			field.Creatable = false
+			field.Updatable = false
+			field.Readable = false
 
-	//if dataTyper, ok := fieldValue.Interface().(GormDataTypeInterface); ok {
-	//	field.DataType = DataType(dataTyper.GormDataType())
-	//}
-	//
-	//if v, ok := field.TagSettings["AUTOCREATETIME"]; ok || (field.Name == "CreatedAt" && (field.DataType == Time || field.DataType == Int || field.DataType == Uint)) {
-	//	if field.DataType == Time {
-	//		field.AutoCreateTime = UnixTime
-	//	} else if strings.ToUpper(v) == "NANO" {
-	//		field.AutoCreateTime = UnixNanosecond
-	//	} else if strings.ToUpper(v) == "MILLI" {
-	//		field.AutoCreateTime = UnixMillisecond
-	//	} else {
-	//		field.AutoCreateTime = UnixSecond
-	//	}
-	//}
-	//
-	//if v, ok := field.TagSettings["AUTOUPDATETIME"]; ok || (field.Name == "UpdatedAt" && (field.DataType == Time || field.DataType == Int || field.DataType == Uint)) {
-	//	if field.DataType == Time {
-	//		field.AutoUpdateTime = UnixTime
-	//	} else if strings.ToUpper(v) == "NANO" {
-	//		field.AutoUpdateTime = UnixNanosecond
-	//	} else if strings.ToUpper(v) == "MILLI" {
-	//		field.AutoUpdateTime = UnixMillisecond
-	//	} else {
-	//		field.AutoUpdateTime = UnixSecond
-	//	}
-	//}
-	//
-	//if val, ok := field.TagSettings["TYPE"]; ok {
-	//	switch DataType(strings.ToLower(val)) {
-	//	case Bool, Int, Uint, Float, String, Time, Bytes:
-	//		field.DataType = DataType(strings.ToLower(val))
-	//	default:
-	//		field.DataType = DataType(val)
-	//	}
-	//}
-	//
-	//if field.GORMDataType == "" {
-	//	field.GORMDataType = field.DataType
-	//}
+			cacheStore := &sync.Map{}
+			cacheStore.Store(embeddedCacheKey, true)
+			if field.EmbeddedSchema, err = schema.options.getOrParse(fieldValue.Interface()); err != nil {
+				schema.err = err
+			}
 
-	//if field.Size == 0 {
-	//	switch reflect.Indirect(fieldValue).Kind() {
-	//	case reflect.Int, reflect.Int64, reflect.Uint, reflect.Uint64, reflect.Float64:
-	//		field.Size = 64
-	//	case reflect.Int8, reflect.Uint8:
-	//		field.Size = 8
-	//	case reflect.Int16, reflect.Uint16:
-	//		field.Size = 16
-	//	case reflect.Int32, reflect.Uint32, reflect.Float32:
-	//		field.Size = 32
-	//	}
-	//}
-	//
-	//// setup permission
-	//if val, ok := field.TagSettings["-"]; ok {
-	//	val = strings.ToLower(strings.TrimSpace(val))
-	//	switch val {
-	//	case "-":
-	//		field.Creatable = false
-	//		field.Updatable = false
-	//		field.Readable = false
-	//		field.DataType = ""
-	//	case "all":
-	//		field.Creatable = false
-	//		field.Updatable = false
-	//		field.Readable = false
-	//		field.DataType = ""
-	//		field.IgnoreMigration = true
-	//	case "migration":
-	//		field.IgnoreMigration = true
-	//	}
-	//}
-	//
-	//if v, ok := field.TagSettings["->"]; ok {
-	//	field.Creatable = false
-	//	field.Updatable = false
-	//	if strings.ToLower(v) == "false" {
-	//		field.Readable = false
-	//	} else {
-	//		field.Readable = true
-	//	}
-	//}
-	//
-	//if v, ok := field.TagSettings["<-"]; ok {
-	//	field.Creatable = true
-	//	field.Updatable = true
-	//
-	//	if v != "<-" {
-	//		if !strings.Contains(v, "create") {
-	//			field.Creatable = false
-	//		}
-	//
-	//		if !strings.Contains(v, "update") {
-	//			field.Updatable = false
-	//		}
-	//	}
-	//}
+			for _, ef := range field.EmbeddedSchema.Fields {
+				ef.Schema = schema
+				ef.OwnerSchema = field.EmbeddedSchema
+				ef.BindNames = append([]string{fieldStruct.Name}, ef.BindNames...)
+				// index is negative means is pointer
+				if field.FieldType.Kind() == reflect.Struct {
+					ef.StructField.Index = append([]int{fieldStruct.Index[0]}, ef.StructField.Index...)
+				} else {
+					ef.StructField.Index = append([]int{-fieldStruct.Index[0] - 1}, ef.StructField.Index...)
+				}
+
+				if prefix, ok := field.TagSettings["EMBEDDEDPREFIX"]; ok && ef.DBName != "" {
+					ef.DBName = prefix + ef.DBName
+				}
+
+				if ef.PrimaryKey {
+					if val, ok := ef.TagSettings["PRIMARYKEY"]; ok && utils.CheckTruth(val) {
+						ef.PrimaryKey = true
+					} else if val, ok := ef.TagSettings["PRIMARY_KEY"]; ok && utils.CheckTruth(val) {
+						ef.PrimaryKey = true
+					} else {
+						ef.PrimaryKey = false
+
+						if val, ok := ef.TagSettings["AUTOINCREMENT"]; !ok || !utils.CheckTruth(val) {
+							ef.AutoIncrement = false
+						}
+
+						if ef.DefaultValue == "" {
+							ef.HasDefaultValue = false
+						}
+					}
+				}
+
+				for k, v := range field.TagSettings {
+					ef.TagSettings[k] = v
+				}
+			}
+		case reflect.Invalid, reflect.Uintptr, reflect.Array, reflect.Chan, reflect.Func, reflect.Interface,
+			reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer, reflect.Complex64, reflect.Complex128:
+			schema.err = fmt.Errorf("invalid embedded struct for %s's field %s, should be struct, but got %v", field.Schema.Name, field.Name, field.FieldType)
+		}
+	}
 
 	return field
 }

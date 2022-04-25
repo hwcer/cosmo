@@ -18,6 +18,7 @@ type Schema struct {
 	ModelType      reflect.Type
 	FieldsByName   map[string]*Field
 	FieldsByDBName map[string]*Field
+	options        *Options
 }
 
 func (schema Schema) String() string {

@@ -59,6 +59,7 @@ func (this *Options) ParseWithSpecialTableName(dest interface{}, specialTableNam
 	}
 
 	schema := &Schema{
+		options:     this,
 		initialized: make(chan struct{}),
 	}
 	// Load exist schmema cache, return if exists
@@ -121,4 +122,24 @@ func (this *Options) ParseWithSpecialTableName(dest interface{}, specialTableNam
 		}
 	}()
 	return schema, schema.err
+}
+
+func (this *Options) getOrParse(dest interface{}) (*Schema, error) {
+	modelType := reflect.ValueOf(dest).Type()
+	for modelType.Kind() == reflect.Slice || modelType.Kind() == reflect.Array || modelType.Kind() == reflect.Ptr {
+		modelType = modelType.Elem()
+	}
+
+	if modelType.Kind() != reflect.Struct {
+		if modelType.PkgPath() == "" {
+			return nil, fmt.Errorf("%w: %+v", ErrUnsupportedDataType, dest)
+		}
+		return nil, fmt.Errorf("%w: %s.%s", ErrUnsupportedDataType, modelType.PkgPath(), modelType.Name())
+	}
+
+	if v, ok := this.Store.Load(modelType); ok {
+		return v.(*Schema), nil
+	}
+
+	return this.Parse(dest)
 }
