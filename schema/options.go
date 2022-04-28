@@ -62,7 +62,7 @@ func (this *Options) ParseWithSpecialTableName(dest interface{}, specialTableNam
 		options:     this,
 		initialized: make(chan struct{}),
 	}
-	// Load exist schmema cache, return if exists
+	// Player exist schmema cache, return if exists
 	if v, loaded := this.Store.LoadOrStore(schemaCacheKey, schema); loaded {
 		s := v.(*Schema)
 		<-s.initialized
