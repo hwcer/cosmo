@@ -59,11 +59,11 @@ func (this *BulkWrite) Delete(where ...interface{}) {
 
 	if multiple {
 		model := mongo.NewDeleteManyModel()
-		model.SetFilter(query)
+		model.SetFilter(filter)
 		this.models = append(this.models, model)
 	} else {
 		model := mongo.NewDeleteOneModel()
-		model.SetFilter(query)
+		model.SetFilter(filter)
 		this.models = append(this.models, model)
 	}
 }
