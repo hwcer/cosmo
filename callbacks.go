@@ -2,7 +2,6 @@ package cosmo
 
 import (
 	"github.com/hwcer/cosmo/clause"
-	"reflect"
 )
 
 func initializeCallbacks() *callbacks {
@@ -58,21 +57,21 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 		tx.Errorf("Table not set, please set it like: db.Model(&user) or db.Table(\"users\") %+v")
 	}
 	//dest || model 类型为Struct并且主键不为空时，设置为查询条件
-	var reflectModel reflect.Value
-	if stmt.Model != nil {
-		reflectModel = reflect.Indirect(reflect.ValueOf(stmt.Model))
-	} else if stmt.ReflectValue.Kind() == reflect.Struct {
-		reflectModel = stmt.ReflectValue
-	}
-	if reflectModel.IsValid() && !reflectModel.IsZero() {
-		field := stmt.Schema.LookUpField(clause.MongoPrimaryName)
-		if field != nil {
-			v := reflectModel.FieldByIndex(field.StructField.Index)
-			if v.IsValid() && !v.IsZero() {
-				stmt.Clause.Primary(v.Interface())
-			}
-		}
-	}
+	//var reflectModel reflect.Value
+	//if stmt.Model != nil {
+	//	reflectModel = reflect.Indirect(reflect.ValueOf(stmt.Model))
+	//} else if stmt.ReflectValue.Kind() == reflect.Struct {
+	//	reflectModel = stmt.ReflectValue
+	//}
+	//if reflectModel.IsValid() && !reflectModel.IsZero() {
+	//	field := stmt.Schema.LookUpField(clause.MongoPrimaryName)
+	//	if field != nil {
+	//		v := reflectModel.FieldByIndex(field.StructField.Index)
+	//		if v.IsValid() && !v.IsZero() {
+	//			stmt.Clause.Primary(v.Interface())
+	//		}
+	//	}
+	//}
 
 	if p.handle == nil || tx.Error != nil {
 		return

@@ -56,18 +56,15 @@ func (stmt *Statement) Parse() (tx *DB) {
 			return
 		}
 	}
-	if stmt.Table == "" || stmt.Model != nil {
-		model := stmt.Model
-		if model == nil {
-			model = stmt.Dest
-		}
-		var err error
-		if stmt.Schema, err = Schema.Parse(model); err != nil {
-			tx.Errorf(ErrInvalidValue)
-			return
-		} else if stmt.Table == "" {
-			stmt.Table = stmt.Schema.Table
-		}
+
+	var err error
+	if stmt.Model != nil {
+		stmt.Schema, err = schema.Parse(stmt.Model, Options)
+	} else {
+		stmt.Schema, err = schema.Parse(stmt.ReflectValue, Options)
+	}
+	if stmt.Table == "" && err == nil {
+		stmt.Table = stmt.Schema.Table
 	}
 
 	return

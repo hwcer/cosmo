@@ -2,7 +2,7 @@ package cosmo
 
 import (
 	"github.com/hwcer/cosmo/clause"
-	update2 "github.com/hwcer/cosmo/update"
+	"github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -36,8 +36,8 @@ func cmdCreate(tx *DB) (err error) {
 // map ,BuildUpdate.m 支持 $set $incr $setOnInsert, 其他未使用$字段一律视为$set操作
 //支持struct 保存所有非零值
 func cmdUpdate(tx *DB) (err error) {
-	var update update2.Update
-	if update, err = update2.Build(tx.Statement.Dest, Schema, tx.Statement.Model); err != nil {
+	var data update.Update
+	if data, err = update.Build(tx.Statement.Dest, tx.Statement.Schema); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)
@@ -53,12 +53,12 @@ func cmdUpdate(tx *DB) (err error) {
 	if tx.Statement.multiple || clause.Multiple(filter) {
 		opts := options.Update()
 		var result *mongo.UpdateResult
-		if result, err = coll.UpdateMany(tx.Statement.Context, filter, update, opts); err == nil {
+		if result, err = coll.UpdateMany(tx.Statement.Context, filter, data, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
 		}
 	} else if reflectModel.IsValid() {
 		opts := options.FindOneAndUpdate()
-		if _, ok := update[MongoSetOnInsert]; ok {
+		if _, ok := data[MongoSetOnInsert]; ok {
 			opts.SetUpsert(true)
 		}
 		opts.SetReturnDocument(options.After)
@@ -66,7 +66,7 @@ func cmdUpdate(tx *DB) (err error) {
 		if projection, _, _ := tx.Statement.projection(); len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
-		if updateResult := coll.FindOneAndUpdate(tx.Statement.Context, filter, update, opts); updateResult.Err() == nil {
+		if updateResult := coll.FindOneAndUpdate(tx.Statement.Context, filter, data, opts); updateResult.Err() == nil {
 			tx.RowsAffected = 1
 			err = updateResult.Decode(&values)
 		} else {
@@ -74,11 +74,11 @@ func cmdUpdate(tx *DB) (err error) {
 		}
 	} else {
 		opts := options.Update()
-		if _, ok := update[MongoSetOnInsert]; ok {
+		if _, ok := data[MongoSetOnInsert]; ok {
 			opts.SetUpsert(true)
 		}
 		var result *mongo.UpdateResult
-		if result, err = coll.UpdateOne(tx.Statement.Context, filter, update, opts); err == nil {
+		if result, err = coll.UpdateOne(tx.Statement.Context, filter, data, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
 		}
 	}
@@ -86,7 +86,7 @@ func cmdUpdate(tx *DB) (err error) {
 		tx.Error = err
 		return
 	}
-	_ = tx.SetColumn(values)
+	//_ = tx.SetColumn(values)
 	return
 }
 

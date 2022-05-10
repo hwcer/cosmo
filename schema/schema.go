@@ -11,6 +11,7 @@ var ErrUnsupportedDataType = errors.New("unsupported data type")
 
 type Schema struct {
 	err            error
+	options        *Options
 	initialized    chan struct{}
 	Name           string
 	Table          string
@@ -18,7 +19,6 @@ type Schema struct {
 	ModelType      reflect.Type
 	FieldsByName   map[string]*Field
 	FieldsByDBName map[string]*Field
-	options        *Options
 }
 
 func (schema Schema) String() string {

@@ -14,39 +14,34 @@ import (
 //Build 使用当前模型，将map bson.m Struct 转换成Update
 // 如果设置了model,model除主键和零值外其他键值一律作为SetOnInsert值
 // 如果设置了model i为bson.m可以使用数据库名和model名
-func Build(i interface{}, store *schema.Options, model interface{}) (update Update, err error) {
-	var schemaModel *schema.Schema
-	if model != nil {
-		if schemaModel, err = store.Parse(model); err != nil {
-			return
-		}
-	}
+func Build(i interface{}, sch *schema.Schema) (update Update, err error) {
 	reflectValue := reflect.Indirect(utils.ValueOf(i))
 	switch reflectValue.Kind() {
 	case reflect.Map:
-		update, err = parseMap(i, schemaModel)
+		update, err = parseMap(i, sch)
 	case reflect.Struct:
-		update, err = parseStruct(reflectValue, store)
+		update, err = parseStruct(reflectValue, sch)
 	default:
 		err = fmt.Errorf("类型错误:%v", reflectValue.Kind())
 	}
-	if err != nil || model == nil {
-		return
-	}
-	//setOnInsert
-	reflectModel := reflect.Indirect(utils.ValueOf(model))
-	if !reflectModel.IsValid() || reflectModel.IsZero() {
-		return
-	}
-	for _, field := range schemaModel.Fields {
-		if field.DBName == clause.MongoPrimaryName || update.Has(field.DBName) {
-			continue
-		}
-		v := reflectModel.FieldByIndex(field.StructField.Index)
-		if v.IsValid() && !v.IsZero() {
-			update.SetOnInert(field.DBName, v.Interface())
-		}
-	}
+
+	//if err != nil || model == nil {
+	//	return
+	//}
+	////setOnInsert
+	//reflectModel := reflect.Indirect(utils.ValueOf(model))
+	//if !reflectModel.IsValid() || reflectModel.IsZero() {
+	//	return
+	//}
+	//for _, field := range schemaModel.Fields {
+	//	if field.DBName == clause.MongoPrimaryName || update.Has(field.DBName) {
+	//		continue
+	//	}
+	//	v := reflectModel.FieldByIndex(field.StructField.Index)
+	//	if v.IsValid() && !v.IsZero() {
+	//		update.SetOnInert(field.DBName, v.Interface())
+	//	}
+	//}
 	return
 }
 
@@ -82,13 +77,9 @@ func parseMap(dest interface{}, sch *schema.Schema) (update Update, err error) {
 	return
 }
 
-func parseStruct(reflectValue reflect.Value, store *schema.Options) (update Update, err error) {
-	var destSchema *schema.Schema
-	if destSchema, err = store.Parse(reflectValue); err != nil {
-		return
-	}
+func parseStruct(reflectValue reflect.Value, sch *schema.Schema) (update Update, err error) {
 	update = make(Update)
-	for _, field := range destSchema.Fields {
+	for _, field := range sch.Fields {
 		v := reflectValue.FieldByIndex(field.StructField.Index)
 		if v.IsValid() && !v.IsZero() {
 			if field.DBName != clause.MongoPrimaryName {

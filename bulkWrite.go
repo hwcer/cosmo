@@ -3,7 +3,7 @@ package cosmo
 import (
 	"context"
 	"github.com/hwcer/cosmo/clause"
-	update2 "github.com/hwcer/cosmo/update"
+	"github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -32,12 +32,12 @@ func (this *BulkWrite) Save() (result *mongo.BulkWriteResult, err error) {
 func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	update, _ := update2.Build(data, Schema, nil)
+	upsert, _ := update.Build(data, this.tx.Statement.Schema)
 
 	model := mongo.NewUpdateOneModel()
 	model.SetFilter(query.Build(this.tx.Statement.Schema))
-	model.SetUpdate(update)
-	if _, ok := update[update2.UpdateTypeSetOnInsert]; ok {
+	model.SetUpdate(upsert)
+	if _, ok := upsert[update.UpdateTypeSetOnInsert]; ok {
 		model.SetUpsert(true)
 	}
 	this.models = append(this.models, model)

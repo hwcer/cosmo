@@ -97,7 +97,7 @@ func (db *DB) Merge(i interface{}) error {
 	if tx.Error != nil {
 		return tx.Error
 	}
-	values, err := update.Build(i, Schema, db.Statement.Model)
+	values, err := update.Build(i, tx.Statement.Schema)
 	if err != nil {
 		return err
 	}
@@ -115,16 +115,20 @@ func (db *DB) SetColumn(data map[string]interface{}) error {
 		return nil
 	}
 	reflectModel := reflect.Indirect(reflect.ValueOf(stmt.Model))
-	if !reflectModel.IsValid() || reflectModel.IsZero() {
+	if !reflectModel.IsValid() {
+		//logger.Debug("reflectModel Is Not Valid")
 		return nil
 	}
-
+	//if reflectModel.IsZero() {
+	//	logger.Debug("reflectModel Is Zero")
+	//	return nil
+	//}
 	//if stmt.Schema == nil {
 	//	if tx := stmt.ParseId(); tx.Error != nil {
 	//		return tx.Error
 	//	}
 	//}
-
+	//logger.Debug("reflectModel:%+v", reflectModel.Interface())
 	for k, v := range data {
 		field := stmt.Schema.LookUpField(k)
 		if field != nil {

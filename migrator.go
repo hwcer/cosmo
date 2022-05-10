@@ -12,7 +12,7 @@ import (
 //Sparse
 func (db *DB) AutoMigrator(dst ...interface{}) error {
 	for _, mod := range dst {
-		sch, err := Schema.Parse(mod)
+		sch, err := schema.Parse(mod, Options)
 		if err != nil {
 			return err
 		}
