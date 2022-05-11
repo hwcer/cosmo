@@ -3,6 +3,7 @@ package schema
 import (
 	"errors"
 	"fmt"
+	"github.com/hwcer/cosmo/utils"
 	"reflect"
 )
 
@@ -56,4 +57,18 @@ func (schema Schema) FieldDBName(name string) string {
 		return field.DBName
 	}
 	return name
+}
+
+func (schema Schema) GetValue(i interface{}, key string) interface{} {
+	field := schema.LookUpField(key)
+	if field == nil {
+		return nil
+	}
+	vf := reflect.Indirect(utils.ValueOf(i))
+	val := vf.FieldByIndex(field.StructField.Index)
+
+	if val.IsValid() && !val.IsZero() {
+		return val.Interface()
+	}
+	return nil
 }

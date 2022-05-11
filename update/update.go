@@ -95,3 +95,15 @@ func (u Update) String() string {
 	b, _ := json.Marshal(u)
 	return string(b)
 }
+
+var projectionField = []string{UpdateTypeSet, UpdateTypeInc}
+
+func (u Update) Projection() bson.M {
+	p := make(bson.M)
+	for _, m := range projectionField {
+		for k, _ := range u[m] {
+			p[k] = 1
+		}
+	}
+	return p
+}

@@ -137,6 +137,5 @@ func (db *DB) SetColumn(data map[string]interface{}) error {
 			}
 		}
 	}
-
 	return nil
 }

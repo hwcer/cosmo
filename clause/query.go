@@ -38,6 +38,14 @@ type Query struct {
 	complex map[string][]*Node
 }
 
+func (q *Query) Len() (r int) {
+	r += len(q.where)
+	for _, n := range q.complex {
+		r += len(n)
+	}
+	return
+}
+
 //Primary 使用主键匹配 一个值或者数组
 func (q *Query) Primary(v interface{}) {
 	q.Eq(MongoPrimaryName, v)

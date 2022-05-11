@@ -1,7 +1,5 @@
 package cosmo
 
-import "reflect"
-
 //Find find records that match given conditions
 //dest must be a pointer to a slice
 func (db *DB) Find(dest interface{}, conds ...interface{}) (tx *DB) {
@@ -23,7 +21,6 @@ func (db *DB) Create(value interface{}) (tx *DB) {
 //Update 通用更新
 // values 类型为map ,bson.M 时支持 $set $inc $setOnInsert, 其他未使用$前缀字段一律视为$set操作
 // values 类型为struct保存所有非零值,如果需要将零值写入数据库，请使用map方式
-// 使用Model并且values中未明确设置setOnInsert时,model中除主键和values中明确更新的字段外所有非零值将作为 setOnInsert 值来使用
 //db.Update(&User{Id:1,Name:"myname"}) 匹配 _id=1,更新其他非零字段，常用取出对象，修改值,保存
 //db.Model(&User{Id:1}).Update(bson.M)  匹配 _id=1,更新bson.M中的所有值
 //db.Model(&User{}).Where(1).Update(bson.M)  匹配 _id=1,更新bson.M中的所有值
@@ -45,27 +42,27 @@ func (db *DB) Update(values interface{}, conds ...interface{}) (tx *DB) {
 //db.Model(&User).Delete("name = ?","myname") 匹配 name=myname
 func (db *DB) Delete(conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
-	if len(conds) > 0 && reflect.Indirect(reflect.ValueOf(conds[0])).Kind() == reflect.Struct {
+	if len(conds) > 0 {
 		tx.Statement.Dest = conds[0]
 		db.Where(conds[0], conds[1:]...)
-	} else if len(conds) > 0 {
-		db.Where(conds[0], conds[1:]...)
 	}
-
 	return tx.callbacks.Delete().Execute(tx)
 }
 
-// Count 统计文档数
-func (db *DB) Count(count *int64, conds ...interface{}) (tx *DB) {
+// Count 统计文档数,count 必须为一个指向数字的指针  *int *int32 *int64
+func (db *DB) Count(count interface{}, conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
 		tx = tx.Where(conds[0], conds[1:]...)
 	}
 	tx.Statement.Dest = count
 	return tx.Statement.callbacks.Call(tx, func(db *DB) (err error) {
+		var val int64
 		coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
 		filter := tx.Statement.Clause.Build(db.Statement.Schema)
-		*count, err = coll.CountDocuments(tx.Statement.Context, filter)
+		if val, err = coll.CountDocuments(tx.Statement.Context, filter); err == nil {
+			tx.Statement.ReflectValue.SetInt(val)
+		}
 		return err
 	})
 }

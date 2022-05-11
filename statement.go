@@ -60,13 +60,30 @@ func (stmt *Statement) Parse() (tx *DB) {
 	var err error
 	if stmt.Model != nil {
 		stmt.Schema, err = schema.Parse(stmt.Model, Options)
-	} else {
+	} else if stmt.ReflectValue.Kind() == reflect.Struct {
 		stmt.Schema, err = schema.Parse(stmt.ReflectValue, Options)
+	}
+	if err != nil {
+		tx.Errorf(err)
+		return
 	}
 	if stmt.Table == "" && err == nil {
 		stmt.Table = stmt.Schema.Table
 	}
-
+	//空查询，匹配Dest或者Model中的主键
+	if stmt.Clause.Len() == 0 && stmt.Schema != nil {
+		var reflectValue reflect.Value
+		if stmt.Model != nil {
+			reflectValue = reflect.Indirect(reflect.ValueOf(stmt.Model))
+		} else if stmt.ReflectValue.Kind() == reflect.Struct {
+			reflectValue = stmt.ReflectValue
+		}
+		if reflectValue.IsValid() && !reflectValue.IsZero() {
+			if v := tx.Statement.Schema.GetValue(reflectValue, clause.MongoPrimaryName); v != nil {
+				tx.Where(v)
+			}
+		}
+	}
 	return
 }
 

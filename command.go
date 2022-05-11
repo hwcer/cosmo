@@ -42,14 +42,13 @@ func cmdUpdate(tx *DB) (err error) {
 	}
 	//fmt.Printf("update:%+v\n", update)
 	filter := tx.Statement.Clause.Build(tx.Statement.Schema)
+	//filter := tx.Statement.Clause.Build(tx.Statement.Schema)
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
 	//fmt.Printf("Update filter:%+v\n", filter)
 	coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
-	values := make(map[string]interface{})
 	reflectModel := reflect.Indirect(reflect.ValueOf(tx.Statement.Model))
-
 	if tx.Statement.multiple || clause.Multiple(filter) {
 		opts := options.Update()
 		var result *mongo.UpdateResult
@@ -63,14 +62,22 @@ func cmdUpdate(tx *DB) (err error) {
 		}
 		opts.SetReturnDocument(options.After)
 
-		if projection, _, _ := tx.Statement.projection(); len(projection) > 0 {
+		var projection bson.M
+		if projection, _, _ = tx.Statement.projection(); len(projection) == 0 {
+			projection = data.Projection()
+		}
+		if len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
+		values := make(map[string]interface{})
 		if updateResult := coll.FindOneAndUpdate(tx.Statement.Context, filter, data, opts); updateResult.Err() == nil {
 			tx.RowsAffected = 1
 			err = updateResult.Decode(&values)
 		} else {
 			err = updateResult.Err()
+		}
+		if err == nil {
+			_ = tx.SetColumn(values)
 		}
 	} else {
 		opts := options.Update()
@@ -86,7 +93,6 @@ func cmdUpdate(tx *DB) (err error) {
 		tx.Error = err
 		return
 	}
-	//_ = tx.SetColumn(values)
 	return
 }
 
