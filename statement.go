@@ -60,14 +60,14 @@ func (stmt *Statement) Parse() (tx *DB) {
 	var err error
 	if stmt.Model != nil {
 		stmt.Schema, err = schema.Parse(stmt.Model, Options)
-	} else if stmt.ReflectValue.Kind() == reflect.Struct {
+	} else {
 		stmt.Schema, err = schema.Parse(stmt.ReflectValue, Options)
 	}
 	if err != nil {
 		tx.Errorf(err)
 		return
 	}
-	if stmt.Table == "" && err == nil {
+	if stmt.Table == "" {
 		stmt.Table = stmt.Schema.Table
 	}
 	//空查询，匹配Dest或者Model中的主键
