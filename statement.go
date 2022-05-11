@@ -71,7 +71,7 @@ func (stmt *Statement) Parse() (tx *DB) {
 		stmt.Table = stmt.Schema.Table
 	}
 	//空查询，匹配Dest或者Model中的主键
-	if stmt.Clause.Len() == 0 && stmt.Schema != nil {
+	if stmt.Clause.Len() == 0 {
 		var reflectValue reflect.Value
 		if stmt.Model != nil {
 			reflectValue = reflect.Indirect(reflect.ValueOf(stmt.Model))
