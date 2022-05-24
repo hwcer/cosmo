@@ -2,6 +2,7 @@ package cosmo
 
 import (
 	"context"
+	"fmt"
 	"github.com/hwcer/cosmo/schema"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -19,7 +20,7 @@ func (db *DB) AutoMigrator(dst ...interface{}) error {
 		indexes := sch.ParseIndexes()
 		for _, index := range indexes {
 			if e := db.indexes(mod, index); e != nil {
-				return e
+				return fmt.Errorf("AutoMigrator[%v.%v]:%v", db.dbname, sch.Table, e)
 			}
 		}
 	}

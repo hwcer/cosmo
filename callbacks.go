@@ -1,9 +1,5 @@
 package cosmo
 
-import (
-	"github.com/hwcer/cosmo/clause"
-)
-
 func initializeCallbacks() *callbacks {
 	cb := &callbacks{processors: make(map[string]*processor)}
 	cb.processors["query"] = &processor{handle: cmdQuery}
@@ -76,13 +72,7 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 	if p.handle == nil || tx.Error != nil {
 		return
 	}
-	defer func() {
-		tx.Statement.Model = nil
-		tx.Statement.Schema = nil
-		tx.Statement.Paging = &Paging{}
-		tx.Statement.Clause = clause.New()
-		tx.Statement.multiple = false
-	}()
+	defer tx.reset()
 	if err := p.handle(tx); err != nil {
 		tx.Errorf(err)
 		return

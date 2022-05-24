@@ -1,5 +1,97 @@
 package cosmo
 
+import (
+	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/cosmo/clause"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"reflect"
+)
+
+const DefaultPageSize = 100
+
+func (tx *DB) reset() {
+	tx.Statement.Model = nil
+	tx.Statement.Schema = nil
+	tx.Statement.Paging = &Paging{}
+	tx.Statement.Clause = clause.New()
+	tx.Statement.multiple = false
+}
+
+//View 分页查询
+func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
+	var err error
+	if paging.Page == 0 || paging.Size == 0 {
+		paging.Init(DefaultPageSize)
+	}
+	if paging.Rows == nil {
+		paging.Rows = []bson.M{}
+	}
+	reflectRows := reflect.Indirect(reflect.ValueOf(paging.Rows))
+	if reflectRows.Kind() != reflect.Array && reflectRows.Kind() != reflect.Slice {
+		tx.Errorf("paging.Rows type not Array or Slice")
+	}
+	tx = db.getInstance()
+	if len(conds) > 0 {
+		tx = db.Where(conds[0], conds[1:]...)
+	}
+	tx.Page(paging.Page, paging.Size)
+	tx.Statement.Dest = paging.Rows
+	tx = db.Statement.Parse()
+	if tx.Error != nil {
+		return
+	}
+
+	stmt := tx.Statement
+	if stmt.Table == "" {
+		tx.Errorf("Table not set, please set it like: db.Model(&user) or db.Table(\"users\") %+v")
+		return
+	}
+	defer tx.reset()
+
+	coll := tx.client.Database(tx.dbname).Collection(stmt.Table)
+	filter := tx.Statement.Clause.Build(stmt.Schema)
+
+	if paging.Total == 0 {
+		var val int64
+		if val, err = coll.CountDocuments(stmt.Context, filter); err == nil {
+			paging.Total = int(val)
+		}
+	}
+
+	//find
+	var (
+		order      bson.D
+		projection bson.M
+	)
+	if projection, order, err = tx.Statement.projection(); err != nil {
+		return
+	}
+	opts := options.Find()
+	if stmt.Paging.limit > 0 {
+		opts.SetLimit(int64(tx.Statement.Paging.limit))
+	}
+	if stmt.Paging.offset > 0 {
+		opts.SetSkip(int64(tx.Statement.Paging.offset))
+	}
+	if len(order) > 0 {
+		opts.SetSort(order)
+	}
+	if len(projection) > 0 {
+		opts.SetProjection(projection)
+	}
+	var cursor *mongo.Cursor
+	if cursor, err = coll.Find(stmt.Context, filter, opts); err != nil {
+		return
+	}
+	cursor.RemainingBatchLength()
+	if err = cursor.All(stmt.Context, &paging.Rows); err == nil {
+		tx.RowsAffected = int64(reflectRows.Len())
+	}
+	return tx
+}
+
 //Find find records that match given conditions
 //dest must be a pointer to a slice
 func (db *DB) Find(dest interface{}, conds ...interface{}) (tx *DB) {
@@ -55,6 +147,7 @@ func (db *DB) Count(count interface{}, conds ...interface{}) (tx *DB) {
 	if len(conds) > 0 {
 		tx = tx.Where(conds[0], conds[1:]...)
 	}
+
 	tx.Statement.Dest = count
 	return tx.Statement.callbacks.Call(tx, func(db *DB) (err error) {
 		var val int64
