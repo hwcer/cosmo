@@ -3,7 +3,7 @@ module github.com/hwcer/cosmo
 go 1.17
 
 require (
-	github.com/hwcer/cosgo v0.0.0-20220507065546-60dfb4190d31
+	github.com/hwcer/cosgo v0.0.0-20220608073810-65a13faaa153
 	github.com/jinzhu/now v1.1.4
 	go.mongodb.org/mongo-driver v1.8.3
 	gorm.io/gorm v1.23.1
