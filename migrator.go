@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"strings"
 )
 
 //AutoMigrator returns migrator
@@ -33,7 +34,7 @@ func (db *DB) indexes(model interface{}, index schema.Index) (err error) {
 	for _, field := range index.Fields {
 		k := field.DBName
 		v := 1
-		if field.Sort == "desc" {
+		if strings.ToUpper(field.Sort) == "DESC" {
 			v = -1
 		}
 		keys = append(keys, bson.E{Key: k, Value: v})
