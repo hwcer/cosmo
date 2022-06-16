@@ -113,8 +113,8 @@ func (db *DB) Create(value interface{}) (tx *DB) {
 //Update 通用更新
 // values 类型为map ,bson.M 时支持 $set $inc $setOnInsert, 其他未使用$前缀字段一律视为$set操作
 // values 类型为struct保存所有非零值,如果需要将零值写入数据库，请使用map方式
-//db.Update(&User{Id:1,Name:"myname"}) 匹配 _id=1,更新其他非零字段，常用取出对象，修改值,保存
-//db.Model(&User{Id:1}).Update(bson.M)  匹配 _id=1,更新bson.M中的所有值
+//db.Update(&User{Id:1,Name:"myname"},1) 匹配 _id=1,更新其他非零字段，常用取出对象，修改值,保存
+//db.Model(&User{}).Update(bson.M,1)  匹配 _id=1,更新bson.M中的所有值
 //db.Model(&User{}).Where(1).Update(bson.M)  匹配 _id=1,更新bson.M中的所有值
 //db.Model(&User{}).Where("name = ?","myname").Update(bson.M)  匹配 name=myname,更新bson.M中的所有值
 
