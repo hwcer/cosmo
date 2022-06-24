@@ -53,11 +53,15 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	coll := tx.client.Database(tx.dbname).Collection(stmt.Table)
 	filter := tx.Statement.Clause.Build(stmt.Schema)
 
-	if paging.Total == 0 {
+	if paging.Record == 0 {
 		var val int64
 		if val, err = coll.CountDocuments(stmt.Context, filter); err == nil {
-			paging.Total = int(val)
+			paging.Record = int(val)
 		}
+	}
+	paging.Total = paging.Record / paging.Size
+	if paging.Record%paging.Size > 0 {
+		paging.Total += 1
 	}
 
 	//find
