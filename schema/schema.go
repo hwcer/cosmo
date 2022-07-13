@@ -56,7 +56,7 @@ func (schema Schema) FieldDBName(name string) string {
 	if field := schema.LookUpField(name); field != nil {
 		return field.DBName
 	}
-	return name
+	return ""
 }
 
 func (schema Schema) GetValue(i interface{}, key string) interface{} {

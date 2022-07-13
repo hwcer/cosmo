@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"github.com/hwcer/cosgo/library/logger"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosmo/utils"
 	"reflect"
 	"strconv"

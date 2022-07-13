@@ -11,6 +11,10 @@ import (
 	"strings"
 )
 
+type SetOnInsert interface {
+	SetOnInsert() (map[string]interface{}, error)
+}
+
 //Build 使用当前模型，将map bson.m Struct 转换成Update
 // 如果设置了model,model除主键和零值外其他键值一律作为SetOnInsert值
 // 如果设置了model i为bson.m可以使用数据库名和model名
@@ -20,7 +24,8 @@ func Build(i interface{}, sch *schema.Schema) (update Update, err error) {
 	case reflect.Map:
 		update, err = parseMap(i, sch)
 	case reflect.Struct:
-		update, err = parseStruct(reflectValue, sch)
+		update, err = parseStruct(reflectValue, sch, i)
+
 	default:
 		err = fmt.Errorf("类型错误:%v", reflectValue.Kind())
 	}
@@ -66,18 +71,18 @@ func parseMap(dest interface{}, sch *schema.Schema) (update Update, err error) {
 			if err = update.Convert(k, v); err != nil {
 				return
 			}
-		} else {
-			if sch != nil {
-				update.Set(sch.FieldDBName(k), v)
-			} else {
-				update.Set(k, v)
+		} else if sch != nil {
+			if dbName := sch.FieldDBName(k); dbName != "" {
+				update.Set(dbName, v)
 			}
+		} else {
+			update.Set(k, v)
 		}
 	}
 	return
 }
 
-func parseStruct(reflectValue reflect.Value, sch *schema.Schema) (update Update, err error) {
+func parseStruct(reflectValue reflect.Value, sch *schema.Schema, i interface{}) (update Update, err error) {
 	update = make(Update)
 	for _, field := range sch.Fields {
 		v := reflectValue.FieldByIndex(field.StructField.Index)
@@ -87,5 +92,13 @@ func parseStruct(reflectValue reflect.Value, sch *schema.Schema) (update Update,
 			}
 		}
 	}
+
+	if s, ok := i.(SetOnInsert); ok {
+		var v map[string]interface{}
+		if v, err = s.SetOnInsert(); err == nil && v != nil {
+			update[UpdateTypeSetOnInsert] = v
+		}
+	}
+
 	return
 }

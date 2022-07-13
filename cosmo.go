@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hwcer/cosgo/library/logger"
+	"github.com/hwcer/cosgo/logger"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -28,7 +28,7 @@ func New(configs ...*Config) (db *DB) {
 	}
 
 	if config.Logger == nil {
-		config.Logger = logger.Default
+		config.Logger = logger.DefaultLogger
 	}
 
 	if config.Plugins == nil {
