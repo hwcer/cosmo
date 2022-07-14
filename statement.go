@@ -115,11 +115,14 @@ func (stmt *Statement) Schema() *schema.Schema {
 //可以使用model属性名或者数据库字段名
 func (stmt *Statement) Projection() map[string]int {
 	projection := make(map[string]int)
-	for _, k := range stmt.Omits {
-		projection[stmt.DBName(k)] = 0
-	}
 	for _, k := range stmt.Selects {
 		projection[stmt.DBName(k)] = 1
+	}
+	if len(projection) > 0 {
+		return projection
+	}
+	for _, k := range stmt.Omits {
+		projection[stmt.DBName(k)] = 0
 	}
 	return projection
 }

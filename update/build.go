@@ -74,13 +74,19 @@ func parseStruct(reflectValue reflect.Value, stmt statement.Statement) (update U
 	update = make(Update)
 	sch := stmt.Schema()
 	projection := stmt.Projection()
+	selects := int(-1)
+	if len(projection) > 0 {
+		for _, selects = range projection {
+			break
+		}
+	}
 	for _, field := range sch.Fields {
 		v := reflectValue.FieldByIndex(field.StructField.Index)
 		if !v.IsValid() || field.DBName == clause.MongoPrimaryName {
 			continue
 		}
-		if len(projection) > 0 {
-			if projection[field.DBName] > 0 {
+		if selects >= 0 {
+			if _, ok := projection[field.DBName]; (selects == 0 && !ok) || (selects == 1 && ok) {
 				update.Set(field.DBName, v.Interface())
 			}
 		} else if !v.IsZero() {
