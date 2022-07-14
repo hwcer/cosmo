@@ -13,8 +13,8 @@ const DefaultPageSize = 100
 
 func (tx *DB) reset() {
 	tx.Statement.Model = nil
-	tx.Statement.Schema = nil
-	tx.Statement.Paging = &Paging{}
+	tx.Statement.schema = nil
+	tx.Statement.paging = &Paging{}
 	tx.Statement.Clause = clause.New()
 	tx.Statement.multiple = false
 }
@@ -51,7 +51,7 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	defer tx.reset()
 
 	coll := tx.client.Database(tx.dbname).Collection(stmt.Table)
-	filter := tx.Statement.Clause.Build(stmt.Schema)
+	filter := tx.Statement.Clause.Build(stmt.schema)
 
 	if paging.Record == 0 {
 		var val int64
@@ -65,19 +65,14 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	}
 
 	//find
-	var (
-		order      bson.D
-		projection bson.M
-	)
-	if projection, order, err = tx.Statement.projection(); err != nil {
-		return
-	}
+	order := tx.Statement.Order()
+	projection := tx.Statement.Projection()
 	opts := options.Find()
-	if stmt.Paging.limit > 0 {
-		opts.SetLimit(int64(tx.Statement.Paging.limit))
+	if stmt.paging.limit > 0 {
+		opts.SetLimit(int64(tx.Statement.paging.limit))
 	}
-	if stmt.Paging.offset > 0 {
-		opts.SetSkip(int64(tx.Statement.Paging.offset))
+	if stmt.paging.offset > 0 {
+		opts.SetSkip(int64(tx.Statement.paging.offset))
 	}
 	if len(order) > 0 {
 		opts.SetSort(order)
@@ -156,7 +151,7 @@ func (db *DB) Count(count interface{}, conds ...interface{}) (tx *DB) {
 	return tx.Statement.callbacks.Call(tx, func(db *DB) (err error) {
 		var val int64
 		coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
-		filter := tx.Statement.Clause.Build(db.Statement.Schema)
+		filter := tx.Statement.Clause.Build(db.Statement.schema)
 		if val, err = coll.CountDocuments(tx.Statement.Context, filter); err == nil {
 			tx.Statement.ReflectValue.SetInt(val)
 		}

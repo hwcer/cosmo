@@ -64,28 +64,28 @@ func (db *DB) Where(query interface{}, args ...interface{}) (tx *DB) {
 // Page 分页设置 page-当前页，size-每页大小
 func (db *DB) Page(page, size int) (tx *DB) {
 	tx = db.getInstance()
-	tx.Statement.Paging.Page(page, size)
+	tx.Statement.paging.Page(page, size)
 	return
 }
 
 // Order specify order when retrieve records from dbname
 func (db *DB) Order(key string, value int) (tx *DB) {
 	tx = db.getInstance()
-	tx.Statement.Paging.Order(key, value)
+	tx.Statement.paging.Order(key, value)
 	return
 }
 
 // Limit specify the number of records to be retrieved
 func (db *DB) Limit(limit int) (tx *DB) {
 	tx = db.getInstance()
-	tx.Statement.Paging.Limit(limit)
+	tx.Statement.paging.Limit(limit)
 	return
 }
 
 // Offset specify the number of records to skip before starting to return the records
 func (db *DB) Offset(offset int) (tx *DB) {
 	tx = db.getInstance()
-	tx.Statement.Paging.Offset(offset)
+	tx.Statement.paging.Offset(offset)
 	return
 }
 
@@ -97,7 +97,7 @@ func (db *DB) Merge(i interface{}) error {
 	if tx.Error != nil {
 		return tx.Error
 	}
-	values, err := update.Build(i, tx.Statement.Schema)
+	values, err := update.Build(i, tx.Statement)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (db *DB) Merge(i interface{}) error {
 //   stmt.SetColumn("Name", "jinzhu") // Hooks Method
 func (db *DB) SetColumn(data map[string]interface{}) error {
 	stmt := db.Statement
-	if stmt.Model == nil || stmt.Schema == nil {
+	if stmt.Model == nil || stmt.schema == nil {
 		return nil
 	}
 	reflectModel := reflect.Indirect(reflect.ValueOf(stmt.Model))
@@ -123,14 +123,14 @@ func (db *DB) SetColumn(data map[string]interface{}) error {
 	//	logger.Debug("reflectModel Is Zero")
 	//	return nil
 	//}
-	//if stmt.Schema == nil {
+	//if stmt.schema == nil {
 	//	if tx := stmt.ParseId(); tx.Error != nil {
 	//		return tx.Error
 	//	}
 	//}
 	//logger.Debug("reflectModel:%+v", reflectModel.Interface())
 	for k, v := range data {
-		field := stmt.Schema.LookUpField(k)
+		field := stmt.schema.LookUpField(k)
 		if field != nil {
 			if err := field.Set(reflectModel, v); err != nil {
 				return err

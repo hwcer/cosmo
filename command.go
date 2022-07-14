@@ -3,7 +3,6 @@ package cosmo
 import (
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"reflect"
@@ -37,12 +36,12 @@ func cmdCreate(tx *DB) (err error) {
 //支持struct 保存所有非零值
 func cmdUpdate(tx *DB) (err error) {
 	var data update.Update
-	if data, err = update.Build(tx.Statement.Dest, tx.Statement.Schema); err != nil {
+	if data, err = update.Build(tx.Statement.Dest, tx.Statement); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)
-	filter := tx.Statement.Clause.Build(tx.Statement.Schema)
-	//filter := tx.Statement.Clause.Build(tx.Statement.Schema)
+	filter := tx.Statement.Clause.Build(tx.Statement.schema)
+	//filter := tx.Statement.Clause.Build(tx.Statement.schema)
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
@@ -62,10 +61,7 @@ func cmdUpdate(tx *DB) (err error) {
 		}
 		opts.SetReturnDocument(options.After)
 
-		var projection bson.M
-		if projection, _, _ = tx.Statement.projection(); len(projection) == 0 {
-			projection = data.Projection()
-		}
+		projection := tx.Statement.Projection()
 		if len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
@@ -98,7 +94,7 @@ func cmdUpdate(tx *DB) (err error) {
 
 // Delete delete value match given conditions, if the value has primary key, then will including the primary key as condition
 func cmdDelete(tx *DB) (err error) {
-	filter := tx.Statement.Clause.Build(tx.Statement.Schema)
+	filter := tx.Statement.Clause.Build(tx.Statement.schema)
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
@@ -118,7 +114,7 @@ func cmdDelete(tx *DB) (err error) {
 //Find find records that match given conditions
 //dest must be a pointer to a slice
 func cmdQuery(tx *DB) (err error) {
-	filter := tx.Statement.Clause.Build(tx.Statement.Schema)
+	filter := tx.Statement.Clause.Build(tx.Statement.schema)
 	//b, _ := json.Marshal(filter)
 	//fmt.Printf("Query Filter:%+v\n", string(b))
 	var multiple bool
@@ -128,19 +124,13 @@ func cmdQuery(tx *DB) (err error) {
 	default:
 		multiple = false
 	}
-	var (
-		order      bson.D
-		projection bson.M
-	)
-	if projection, order, err = tx.Statement.projection(); err != nil {
-		return
-	}
-
+	order := tx.Statement.Order()
+	projection := tx.Statement.Projection()
 	coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
 	if !multiple {
 		opts := options.FindOne()
-		if tx.Statement.Paging.offset > 0 {
-			opts.SetSkip(int64(tx.Statement.Paging.offset))
+		if tx.Statement.paging.offset > 0 {
+			opts.SetSkip(int64(tx.Statement.paging.offset))
 		}
 		if len(order) > 0 {
 			opts.SetSort(order)
@@ -158,11 +148,11 @@ func cmdQuery(tx *DB) (err error) {
 		}
 	} else {
 		opts := options.Find()
-		if tx.Statement.Paging.limit > 0 {
-			opts.SetLimit(int64(tx.Statement.Paging.limit))
+		if tx.Statement.paging.limit > 0 {
+			opts.SetLimit(int64(tx.Statement.paging.limit))
 		}
-		if tx.Statement.Paging.offset > 0 {
-			opts.SetSkip(int64(tx.Statement.Paging.offset))
+		if tx.Statement.paging.offset > 0 {
+			opts.SetSkip(int64(tx.Statement.paging.offset))
 		}
 		if len(order) > 0 {
 			opts.SetSort(order)

@@ -32,10 +32,10 @@ func (this *BulkWrite) Save() (result *mongo.BulkWriteResult, err error) {
 func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	upsert, _ := update.Build(data, this.tx.Statement.Schema)
+	upsert, _ := update.Build(data, this.tx.Statement)
 
 	model := mongo.NewUpdateOneModel()
-	model.SetFilter(query.Build(this.tx.Statement.Schema))
+	model.SetFilter(query.Build(this.tx.Statement.schema))
 	model.SetUpdate(upsert)
 	if _, ok := upsert[update.UpdateTypeSetOnInsert]; ok {
 		model.SetUpsert(true)
@@ -54,7 +54,7 @@ func (this *BulkWrite) Insert(documents ...interface{}) {
 func (this *BulkWrite) Delete(where ...interface{}) {
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	filter := query.Build(this.tx.Statement.Schema)
+	filter := query.Build(this.tx.Statement.schema)
 	multiple := clause.Multiple(filter)
 
 	if multiple {

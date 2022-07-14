@@ -13,7 +13,7 @@ func NewStatement(db *DB) *Statement {
 		DB:       db,
 		Context:  context.Background(),
 		Clause:   clause.New(),
-		Paging:   &Paging{},
+		paging:   &Paging{},
 		settings: map[string]interface{}{},
 	}
 }
@@ -28,15 +28,15 @@ type Statement struct {
 	//ReflectModel reflect.Value
 	Omits    []string // omit columns
 	Selects  []string // selected columns
-	Schema   *schema.Schema
 	Context  context.Context
 	Clause   *clause.Query
-	Paging   *Paging
+	paging   *Paging
+	schema   *schema.Schema
 	settings map[string]interface{}
 	multiple bool
 }
 
-//Parse Parse model to Schema
+//Parse Parse model to schema
 func (stmt *Statement) Parse() (tx *DB) {
 	tx = stmt.DB
 	if tx.Error != nil {
@@ -52,23 +52,23 @@ func (stmt *Statement) Parse() (tx *DB) {
 			stmt.ReflectValue = stmt.ReflectValue.Elem()
 		}
 		if !stmt.ReflectValue.IsValid() {
-			tx.Errorf(ErrInvalidValue)
+			_ = tx.Errorf(ErrInvalidValue)
 			return
 		}
 	}
 
 	var err error
 	if stmt.Model != nil {
-		stmt.Schema, err = schema.Parse(stmt.Model, Options)
+		stmt.schema, err = schema.Parse(stmt.Model, Options)
 	} else {
-		stmt.Schema, err = schema.Parse(stmt.ReflectValue, Options)
+		stmt.schema, err = schema.Parse(stmt.ReflectValue, Options)
 	}
 	if err != nil {
 		tx.Errorf(err)
 		return
 	}
 	if stmt.Table == "" {
-		stmt.Table = stmt.Schema.Table
+		stmt.Table = stmt.schema.Table
 	}
 	//空查询，匹配Dest或者Model中的主键
 	if stmt.Clause.Len() == 0 {
@@ -79,7 +79,7 @@ func (stmt *Statement) Parse() (tx *DB) {
 			reflectValue = stmt.ReflectValue
 		}
 		if reflectValue.IsValid() && !reflectValue.IsZero() {
-			if v := tx.Statement.Schema.GetValue(reflectValue, clause.MongoPrimaryName); v != nil {
+			if v := tx.Statement.schema.GetValue(reflectValue, clause.MongoPrimaryName); v != nil {
 				tx.Where(v)
 			}
 		}
@@ -89,28 +89,37 @@ func (stmt *Statement) Parse() (tx *DB) {
 
 //DBName 将对象字段转换成数据库字段
 func (stmt *Statement) DBName(name string) string {
-	if stmt.Schema == nil {
+	if stmt.schema == nil {
 		return name
 	}
-	if field := stmt.Schema.LookUpField(name); field != nil {
+	if field := stmt.schema.LookUpField(name); field != nil {
 		return field.DBName
 	}
 	return name
 }
 
-//projection 不能同时使用Select和Omit 优先Select生效
-//可以使用model属性名或者数据库字段名
-func (stmt *Statement) projection() (projection bson.M, order bson.D, err error) {
-	projection = make(bson.M)
-	for _, k := range stmt.Selects {
-		projection[stmt.DBName(k)] = 1
-	}
-	for _, k := range stmt.Omits {
-		projection[stmt.DBName(k)] = 0
-	}
-	for _, v := range stmt.Paging.order {
+//Order 排序
+func (stmt *Statement) Order() (order bson.D) {
+	for _, v := range stmt.paging.order {
 		v.Key = stmt.DBName(v.Key)
 		order = append(order, v)
 	}
 	return
+}
+
+func (stmt *Statement) Schema() *schema.Schema {
+	return stmt.schema
+}
+
+//Projection 不能同时使用Select和Omit 优先Select生效
+//可以使用model属性名或者数据库字段名
+func (stmt *Statement) Projection() map[string]int {
+	projection := make(map[string]int)
+	for _, k := range stmt.Omits {
+		projection[stmt.DBName(k)] = 0
+	}
+	for _, k := range stmt.Selects {
+		projection[stmt.DBName(k)] = 1
+	}
+	return projection
 }

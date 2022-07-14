@@ -60,7 +60,7 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 	//	reflectModel = stmt.ReflectValue
 	//}
 	//if reflectModel.IsValid() && !reflectModel.IsZero() {
-	//	field := stmt.Schema.LookUpField(clause.MongoPrimaryName)
+	//	field := stmt.schema.LookUpField(clause.MongoPrimaryName)
 	//	if field != nil {
 	//		v := reflectModel.FieldByIndex(field.StructField.Index)
 	//		if v.IsValid() && !v.IsZero() {

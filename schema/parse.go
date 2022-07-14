@@ -38,7 +38,7 @@ func ParseWithSpecialTableName(dest interface{}, specialTableName string, opts *
 		return nil, fmt.Errorf("%w: %s.%s", ErrUnsupportedDataType, modelType.PkgPath(), modelType.Name())
 	}
 
-	// Cache the Schema for performance,
+	// Cache the schema for performance,
 	// Use the modelType or modelType + schemaTable (if it present) as cache key.
 	var schemaCacheKey interface{}
 	if specialTableName != "" {
