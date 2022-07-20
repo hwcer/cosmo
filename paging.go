@@ -30,7 +30,7 @@ func (this *Paging) Offset(offset int) {
 
 //Order 排序方式 1 和 -1 来指定排序的方式，其中 1 为升序排列，而 -1 是用于降序排列。
 func (this *Paging) Order(key string, sort int) {
-	if sort >= 0 {
+	if sort > 0 {
 		sort = 1
 	} else {
 		sort = -1
