@@ -56,14 +56,10 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	if paging.Record == 0 {
 		var val int64
 		if val, err = coll.CountDocuments(stmt.Context, filter); err == nil {
+			paging.Count(int(val))
 			paging.Record = int(val)
 		}
 	}
-	paging.Total = paging.Record / paging.Size
-	if paging.Record%paging.Size > 0 {
-		paging.Total += 1
-	}
-
 	//find
 	order := tx.Statement.Order()
 	projection := tx.Statement.Projection()

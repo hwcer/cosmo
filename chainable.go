@@ -38,18 +38,18 @@ func (db *DB) Select(columns ...string) (tx *DB) {
 		tx.Error = ErrSelectOnOmitsExist
 		return
 	}
-	tx.Statement.Selects = columns
+	tx.Statement.Selects = append(tx.Statement.Selects, columns...)
 	return
 }
 
 // Omit specify fields that you want to ignore when creating, updating and querying
 func (db *DB) Omit(columns ...string) (tx *DB) {
 	tx = db.getInstance()
-	if len(tx.Statement.Omits) > 0 {
+	if len(tx.Statement.Selects) > 0 {
 		tx.Error = ErrOmitOnSelectsExist
 		return
 	}
-	tx.Statement.Omits = columns
+	tx.Statement.Omits = append(tx.Statement.Omits, columns...)
 	return
 }
 
