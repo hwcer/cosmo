@@ -57,7 +57,6 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 		var val int64
 		if val, err = coll.CountDocuments(stmt.Context, filter); err == nil {
 			paging.Count(int(val))
-			paging.Record = int(val)
 		}
 	}
 	//find
@@ -83,6 +82,8 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	cursor.RemainingBatchLength()
 	if err = cursor.All(stmt.Context, &paging.Rows); err == nil {
 		tx.RowsAffected = int64(reflectRows.Len())
+	}else {
+		tx.Error = err
 	}
 	return tx
 }
