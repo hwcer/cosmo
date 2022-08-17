@@ -100,11 +100,10 @@ func ParseWithSpecialTableName(dest interface{}, specialTableName string, opts *
 			// nonexistence or shortest path or first appear prioritized if has permission
 			if _, ok := schema.FieldsByDBName[field.DBName]; !ok {
 				schema.FieldsByDBName[field.DBName] = field
-				schema.FieldsByName[field.Name] = field
 			}
 		}
 
-		if of, ok := schema.FieldsByName[field.Name]; !ok || of.TagSettings["-"] == "-" {
+		if _, ok := schema.FieldsByName[field.Name]; !ok {
 			schema.FieldsByName[field.Name] = field
 		}
 
@@ -126,7 +125,7 @@ func getOrParse(dest interface{}, opts *Options) (*Schema, error) {
 		}
 		return nil, fmt.Errorf("%w: %s.%s", ErrUnsupportedDataType, modelType.PkgPath(), modelType.Name())
 	}
-	o := New(opts.Namer)
+	o := New(opts.Namer) //TODO
 
 	return ParseWithSpecialTableName(dest, "", o)
 }

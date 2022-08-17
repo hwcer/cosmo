@@ -42,7 +42,7 @@ type Field struct {
 	Name   string
 	DBName string
 	//BindNames              []string
-	DataType DataType
+	//DataType DataType
 	//GORMDataType           DataType
 	//PrimaryKey             bool
 	//AutoIncrement          bool
@@ -64,14 +64,14 @@ type Field struct {
 	FieldType         reflect.Type
 	IndirectFieldType reflect.Type
 	StructField       reflect.StructField
-	Tag               reflect.StructTag
-	TagSettings       map[string]string
-	Schema            *Schema
-	EmbeddedSchema    *Schema
-	OwnerSchema       *Schema
-	ReflectValueOf    func(reflect.Value) reflect.Value
-	ValueOf           func(reflect.Value) (value interface{}, zero bool)
-	Set               func(reflect.Value, interface{}) error
+	//Tag               reflect.StructTag
+	//TagSettings    map[string]string
+	Schema         *Schema
+	EmbeddedSchema *Schema //嵌入子对象
+	//OwnerSchema    *Schema
+	ReflectValueOf func(reflect.Value) reflect.Value
+	ValueOf        func(reflect.Value) (value interface{}, zero bool)
+	Set            func(reflect.Value, interface{}) error
 	//IgnoreMigration        bool
 }
 
@@ -87,9 +87,9 @@ func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
 		//Creatable:              true,
 		//Updatable:              true,
 		//Readable:               true,
-		Tag:         fieldStruct.Tag,
-		TagSettings: ParseTagSetting(fieldStruct.Tag.Get("gorm"), ";"),
-		Schema:      schema,
+		//Tag:         fieldStruct.Tag,
+		//TagSettings: ParseTagSetting(fieldStruct.Tag.Get("gorm"), ";"),
+		Schema: schema,
 		//AutoIncrementIncrement: 1,
 	}
 
@@ -139,12 +139,13 @@ func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
 	//	}
 	//}
 
-	var ok bool
-	if dbName := fieldStruct.Tag.Get("bson"); dbName != "" && dbName != "inline" {
-		field.DBName = dbName
-	} else if dbName, ok = field.TagSettings["COLUMN"]; ok {
+	//var ok bool
+	if dbName := fieldStruct.Tag.Get("bson"); dbName != "" {
 		field.DBName = dbName
 	}
+	//else if dbName, ok = field.TagSettings["COLUMN"]; ok {
+	//	field.DBName = dbName
+	//}
 
 	//if v, ok := field.TagSettings["DEFAULT"]; ok {
 	//	field.HasDefaultValue = true
@@ -175,8 +176,8 @@ func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
 			}
 
 			for _, ef := range field.EmbeddedSchema.Fields {
-				ef.Schema = schema
-				ef.OwnerSchema = field.EmbeddedSchema
+				//ef.Schema = schema
+				//ef.OwnerSchema = field.EmbeddedSchema
 				//ef.BindNames = append([]string{fieldStruct.Name}, ef.BindNames...)
 				// index is negative means is pointer
 				if field.FieldType.Kind() == reflect.Struct {

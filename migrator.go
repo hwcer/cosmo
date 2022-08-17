@@ -3,15 +3,14 @@ package cosmo
 import (
 	"context"
 	"fmt"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosmo/schema"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"strings"
 )
 
-//AutoMigrator returns migrator
-//Sparse
+// AutoMigrator returns migrator
+// Sparse
 func (db *DB) AutoMigrator(dst ...interface{}) error {
 	for _, mod := range dst {
 		sch, err := schema.Parse(mod, Options)
@@ -28,34 +27,16 @@ func (db *DB) AutoMigrator(dst ...interface{}) error {
 	return nil
 }
 
-func (db *DB) indexes(model interface{}, index schema.Index) (err error) {
-	indexes := mongo.IndexModel{}
-	var keys []bson.E
-	for _, field := range index.Fields {
-		k := field.DBName
-		v := 1
-		if strings.ToUpper(field.Sort) == "DESC" {
-			v = -1
-		}
-		keys = append(keys, bson.E{Key: k, Value: v})
-	}
-	//fmt.Printf("index:%+v\n\n\n", index)
-	indexes.Keys = keys
-	indexes.Options = options.Index()
-	indexes.Options.SetName(index.Name)
-	if index.Unique {
-		indexes.Options.SetUnique(true)
-	}
-	if index.Sparse {
-		indexes.Options.SetSparse(true)
-	}
-
+func (db *DB) indexes(model interface{}, index *schema.Index) (err error) {
 	tx, coll := db.Collection(model)
 	if tx.Error != nil {
 		return tx.Error
 	}
 	indexView := coll.Indexes()
-	_, err = indexView.CreateOne(context.Background(), indexes)
-
+	_, err = indexView.CreateOne(context.Background(), index.Build())
+	if cv, ok := err.(mongo.CommandError); ok && cv.Code == 85 || strings.HasPrefix(cv.Message, "Index already exists with a different name") {
+		logger.Debug(cv.Message)
+		err = nil
+	}
 	return
 }
