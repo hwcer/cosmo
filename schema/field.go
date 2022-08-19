@@ -13,84 +13,29 @@ import (
 	"github.com/jinzhu/now"
 )
 
-//var embeddedCacheKey = "embedded_cache_store"
-
-type DataType string
-
-type TimeType int64
-
-//var TimeReflectType = reflect.TypeOf(time.Time{})
-
-const (
-	UnixTime        TimeType = 1
-	UnixSecond      TimeType = 2
-	UnixMillisecond TimeType = 3
-	UnixNanosecond  TimeType = 4
-)
-
-const (
-	Bool   DataType = "bool"
-	Int    DataType = "int"
-	Uint   DataType = "uint"
-	Float  DataType = "float"
-	String DataType = "string"
-	Time   DataType = "time"
-	Bytes  DataType = "bytes"
-)
-
 type Field struct {
-	Name   string
-	DBName string
-	//BindNames              []string
-	//DataType DataType
-	//GORMDataType           DataType
-	//PrimaryKey             bool
-	//AutoIncrement          bool
-	//AutoIncrementIncrement int64
-	//Creatable              bool
-	//Updatable              bool
-	//Readable               bool
-	//HasDefaultValue        bool
-	//AutoCreateTime         TimeType
-	//AutoUpdateTime         TimeType
-	//DefaultValue           string
-	//DefaultValueInterface  interface{}
-	//NotNull                bool
-	//Unique                 bool
-	//Comment                string
-	//Size                   int
-	//Precision              int
-	//Scale                  int
+	Name              string
+	DBName            string
 	FieldType         reflect.Type
 	IndirectFieldType reflect.Type
 	StructField       reflect.StructField
-	//Tag               reflect.StructTag
-	//TagSettings    map[string]string
-	Schema         *Schema
-	EmbeddedSchema *Schema //嵌入子对象
+	Schema            *Schema
+	EmbeddedSchema    *Schema //嵌入子对象
 	//OwnerSchema    *Schema
 	ReflectValueOf func(reflect.Value) reflect.Value
-	ValueOf        func(reflect.Value) (value interface{}, zero bool)
-	Set            func(reflect.Value, interface{}) error
-	//IgnoreMigration        bool
+	//ValueOf        func(reflect.Value) (value interface{}, zero bool)
+	Set func(reflect.Value, interface{}) error
 }
 
 func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
 	//var err error
 
 	field := &Field{
-		Name: fieldStruct.Name,
-		//BindNames:              []string{fieldStruct.Name},
+		Name:              fieldStruct.Name,
 		FieldType:         fieldStruct.Type,
 		IndirectFieldType: fieldStruct.Type,
 		StructField:       fieldStruct,
-		//Creatable:              true,
-		//Updatable:              true,
-		//Readable:               true,
-		//Tag:         fieldStruct.Tag,
-		//TagSettings: ParseTagSetting(fieldStruct.Tag.Get("gorm"), ";"),
-		Schema: schema,
-		//AutoIncrementIncrement: 1,
+		Schema:            schema,
 	}
 
 	for field.IndirectFieldType.Kind() == reflect.Ptr {
@@ -98,119 +43,25 @@ func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
 	}
 
 	fieldValue := reflect.New(field.IndirectFieldType)
-	// if field is valuer, used its value or first fields as data type
-	//valuer, isValuer := fieldValue.Interface().(driver.Valuer)
-	//if isValuer {
-	//	if _, ok := fieldValue.Interface().(GormDataTypeInterface); !ok {
-	//		if v, err := valuer.Value(); reflect.ValueOf(v).IsValid() && err == nil {
-	//			fieldValue = reflect.ValueOf(v)
-	//		}
-	//
-	//		var getRealFieldValue func(reflect.Value)
-	//		getRealFieldValue = func(v reflect.Value) {
-	//			rv := reflect.Indirect(v)
-	//			if rv.Kind() == reflect.Struct && !rv.Type().ConvertibleTo(TimeReflectType) {
-	//				for i := 0; i < rv.Type().NumField(); i++ {
-	//					newFieldType := rv.Type().Field(i).Type
-	//					for newFieldType.Kind() == reflect.Ptr {
-	//						newFieldType = newFieldType.Elem()
-	//					}
-	//
-	//					fieldValue = reflect.New(newFieldType)
-	//
-	//					if rv.Type() != reflect.Indirect(fieldValue).Type() {
-	//						getRealFieldValue(fieldValue)
-	//					}
-	//
-	//					if fieldValue.IsValid() {
-	//						return
-	//					}
-	//
-	//					for key, value := range ParseTagSetting(field.IndirectFieldType.Field(i).Tag.Get("gorm"), ";") {
-	//						if _, ok := field.TagSettings[key]; !ok {
-	//							field.TagSettings[key] = value
-	//						}
-	//					}
-	//				}
-	//			}
-	//		}
-	//
-	//		getRealFieldValue(fieldValue)
-	//	}
-	//}
-
-	//var ok bool
 	if dbName := fieldStruct.Tag.Get("bson"); dbName != "" {
 		field.DBName = dbName
 	}
-	//else if dbName, ok = field.TagSettings["COLUMN"]; ok {
-	//	field.DBName = dbName
-	//}
 
-	//if v, ok := field.TagSettings["DEFAULT"]; ok {
-	//	field.HasDefaultValue = true
-	//	field.DefaultValue = v
-	//}
-	//
-	//if val, ok := field.TagSettings["UNIQUE"]; ok && utils.CheckTruth(val) {
-	//	field.Unique = true
-	//}
-	//
-	//// default value is function or null or blank (primary keys)
-	//field.DefaultValue = strings.TrimSpace(field.DefaultValue)
-
-	// Normal anonymous field or having `EMBEDDED` tag
 	if fieldStruct.Anonymous {
 		kind := reflect.Indirect(fieldValue).Kind()
 		switch kind {
 		case reflect.Struct:
 			var err error
-			//field.Creatable = false
-			//field.Updatable = false
-			//field.Readable = false
-
-			//cacheStore := &sync.Map{}
-			//cacheStore.Store(embeddedCacheKey, true)
 			if field.EmbeddedSchema, err = getOrParse(fieldValue.Interface(), schema.options); err != nil {
 				schema.err = err
 			}
 
 			for _, ef := range field.EmbeddedSchema.Fields {
-				//ef.Schema = schema
-				//ef.OwnerSchema = field.EmbeddedSchema
-				//ef.BindNames = append([]string{fieldStruct.Name}, ef.BindNames...)
-				// index is negative means is pointer
 				if field.FieldType.Kind() == reflect.Struct {
 					ef.StructField.Index = append([]int{fieldStruct.Index[0]}, ef.StructField.Index...)
 				} else {
 					ef.StructField.Index = append([]int{-fieldStruct.Index[0] - 1}, ef.StructField.Index...)
 				}
-
-				//if prefix, ok := field.TagSettings["EMBEDDEDPREFIX"]; ok && ef.DBName != "" {
-				//	ef.DBName = prefix + ef.DBName
-				//}
-
-				//if ef.PrimaryKey {
-				//	if val, ok := ef.TagSettings["PRIMARYKEY"]; ok && utils.CheckTruth(val) {
-				//		ef.PrimaryKey = true
-				//	} else if val, ok := ef.TagSettings["PRIMARY_KEY"]; ok && utils.CheckTruth(val) {
-				//		ef.PrimaryKey = true
-				//	} else {
-				//		ef.PrimaryKey = false
-				//
-				//		if val, ok := ef.TagSettings["AUTOINCREMENT"]; !ok || !utils.CheckTruth(val) {
-				//			ef.AutoIncrement = false
-				//		}
-				//
-				//		if ef.DefaultValue == "" {
-				//			ef.HasDefaultValue = false
-				//		}
-				//	}
-				//}
-
-				//for k, v := range field.TagSettings {
-				//	ef.TagSettings[k] = v
-				//}
 			}
 		case reflect.Invalid, reflect.Uintptr, reflect.Array, reflect.Chan, reflect.Func, reflect.Interface,
 			reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer, reflect.Complex64, reflect.Complex128:
@@ -224,41 +75,41 @@ func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
 // create valuer, setter when parse struct
 func (field *Field) setupValuerAndSetter() {
 	// ValueOf
-	switch {
-	case len(field.StructField.Index) == 1:
-		field.ValueOf = func(value reflect.Value) (interface{}, bool) {
-			fieldValue := reflect.Indirect(value).Field(field.StructField.Index[0])
-			return fieldValue.Interface(), fieldValue.IsZero()
-		}
-	case len(field.StructField.Index) == 2 && field.StructField.Index[0] >= 0:
-		field.ValueOf = func(value reflect.Value) (interface{}, bool) {
-			fieldValue := reflect.Indirect(value).Field(field.StructField.Index[0]).Field(field.StructField.Index[1])
-			return fieldValue.Interface(), fieldValue.IsZero()
-		}
-	default:
-		field.ValueOf = func(value reflect.Value) (interface{}, bool) {
-			v := reflect.Indirect(value)
-
-			for _, idx := range field.StructField.Index {
-				if idx >= 0 {
-					v = v.Field(idx)
-				} else {
-					v = v.Field(-idx - 1)
-
-					if v.Type().Elem().Kind() != reflect.Struct {
-						return nil, true
-					}
-
-					if !v.IsNil() {
-						v = v.Elem()
-					} else {
-						return nil, true
-					}
-				}
-			}
-			return v.Interface(), v.IsZero()
-		}
-	}
+	//switch {
+	//case len(field.StructField.Index) == 1:
+	//	field.ValueOf = func(value reflect.Value) (interface{}, bool) {
+	//		fieldValue := reflect.Indirect(value).Field(field.StructField.Index[0])
+	//		return fieldValue.Interface(), fieldValue.IsZero()
+	//	}
+	//case len(field.StructField.Index) == 2 && field.StructField.Index[0] >= 0:
+	//	field.ValueOf = func(value reflect.Value) (interface{}, bool) {
+	//		fieldValue := reflect.Indirect(value).Field(field.StructField.Index[0]).Field(field.StructField.Index[1])
+	//		return fieldValue.Interface(), fieldValue.IsZero()
+	//	}
+	//default:
+	//	field.ValueOf = func(value reflect.Value) (interface{}, bool) {
+	//		v := reflect.Indirect(value)
+	//
+	//		for _, idx := range field.StructField.Index {
+	//			if idx >= 0 {
+	//				v = v.Field(idx)
+	//			} else {
+	//				v = v.Field(-idx - 1)
+	//
+	//				if v.Type().Elem().Kind() != reflect.Struct {
+	//					return nil, true
+	//				}
+	//
+	//				if !v.IsNil() {
+	//					v = v.Elem()
+	//				} else {
+	//					return nil, true
+	//				}
+	//			}
+	//		}
+	//		return v.Interface(), v.IsZero()
+	//	}
+	//}
 
 	// ReflectValueOf
 	switch {
