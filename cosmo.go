@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/logger"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -18,7 +18,7 @@ type DB struct {
 }
 
 // New
-//address uri || *mongo.Client
+// address uri || *mongo.Client
 func New(configs ...*Config) (db *DB) {
 	var config *Config
 	if len(configs) > 0 {
@@ -96,7 +96,7 @@ func (db *DB) Session(session *Session) *DB {
 	return tx
 }
 
-//Database 新数据库
+// Database 新数据库
 func (db *DB) Database(dbname string) *DB {
 	return db.Session(&Session{DBName: dbname})
 }
@@ -114,7 +114,7 @@ func (db *DB) Collection(model interface{}) (tx *DB, coll *mongo.Collection) {
 	return
 }
 
-//BulkWrite 批量写入
+// BulkWrite 批量写入
 func (db *DB) BulkWrite(model interface{}) *BulkWrite {
 	tx := db.Model(model)
 	return &BulkWrite{tx: tx}
