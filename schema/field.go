@@ -1,16 +1,12 @@
 package schema
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"github.com/hwcer/cosmo/utils"
 	"github.com/hwcer/logger"
 	"reflect"
 	"strconv"
-	"time"
-
-	"github.com/jinzhu/now"
 )
 
 type Field struct {
@@ -395,116 +391,8 @@ func (field *Field) setupValuerAndSetter() {
 			return err
 		}
 	default:
-		fieldValue := reflect.New(field.FieldType)
-		switch fieldValue.Elem().Interface().(type) {
-		case time.Time:
-			field.Set = func(value reflect.Value, v interface{}) error {
-				switch data := v.(type) {
-				case time.Time:
-					field.ReflectValueOf(value).Set(reflect.ValueOf(v))
-				case *time.Time:
-					if data != nil {
-						field.ReflectValueOf(value).Set(reflect.ValueOf(data).Elem())
-					} else {
-						field.ReflectValueOf(value).Set(reflect.ValueOf(time.Time{}))
-					}
-				case string:
-					if t, err := now.Parse(data); err == nil {
-						field.ReflectValueOf(value).Set(reflect.ValueOf(t))
-					} else {
-						return fmt.Errorf("failed to set string %v to time.Time field %s, failed to parse it as time, got error %v", v, field.Name, err)
-					}
-				default:
-					return fallbackSetter(value, v, field.Set)
-				}
-				return nil
-			}
-		case *time.Time:
-			field.Set = func(value reflect.Value, v interface{}) error {
-				switch data := v.(type) {
-				case time.Time:
-					fieldValue := field.ReflectValueOf(value)
-					if fieldValue.IsNil() {
-						fieldValue.Set(reflect.New(field.FieldType.Elem()))
-					}
-					fieldValue.Elem().Set(reflect.ValueOf(v))
-				case *time.Time:
-					field.ReflectValueOf(value).Set(reflect.ValueOf(v))
-				case string:
-					if t, err := now.Parse(data); err == nil {
-						fieldValue := field.ReflectValueOf(value)
-						if fieldValue.IsNil() {
-							if v == "" {
-								return nil
-							}
-							fieldValue.Set(reflect.New(field.FieldType.Elem()))
-						}
-						fieldValue.Elem().Set(reflect.ValueOf(t))
-					} else {
-						return fmt.Errorf("failed to set string %v to time.Time field %s, failed to parse it as time, got error %v", v, field.Name, err)
-					}
-				default:
-					return fallbackSetter(value, v, field.Set)
-				}
-				return nil
-			}
-		default:
-			if _, ok := fieldValue.Elem().Interface().(sql.Scanner); ok {
-				// pointer scanner
-				field.Set = func(value reflect.Value, v interface{}) (err error) {
-					reflectV := reflect.ValueOf(v)
-					if !reflectV.IsValid() {
-						field.ReflectValueOf(value).Set(reflect.New(field.FieldType).Elem())
-					} else if reflectV.Type().AssignableTo(field.FieldType) {
-						field.ReflectValueOf(value).Set(reflectV)
-					} else if reflectV.Kind() == reflect.Ptr {
-						if reflectV.IsNil() || !reflectV.IsValid() {
-							field.ReflectValueOf(value).Set(reflect.New(field.FieldType).Elem())
-						} else {
-							return field.Set(value, reflectV.Elem().Interface())
-						}
-					} else {
-						fieldValue := field.ReflectValueOf(value)
-						if fieldValue.IsNil() {
-							fieldValue.Set(reflect.New(field.FieldType.Elem()))
-						}
-
-						if valuer, ok := v.(driver.Valuer); ok {
-							v, _ = valuer.Value()
-						}
-
-						err = fieldValue.Interface().(sql.Scanner).Scan(v)
-					}
-					return
-				}
-			} else if _, ok := fieldValue.Interface().(sql.Scanner); ok {
-				// struct scanner
-				field.Set = func(value reflect.Value, v interface{}) (err error) {
-					reflectV := reflect.ValueOf(v)
-					if !reflectV.IsValid() {
-						field.ReflectValueOf(value).Set(reflect.New(field.FieldType).Elem())
-					} else if reflectV.Type().AssignableTo(field.FieldType) {
-						field.ReflectValueOf(value).Set(reflectV)
-					} else if reflectV.Kind() == reflect.Ptr {
-						if reflectV.IsNil() || !reflectV.IsValid() {
-							field.ReflectValueOf(value).Set(reflect.New(field.FieldType).Elem())
-						} else {
-							return field.Set(value, reflectV.Elem().Interface())
-						}
-					} else {
-						if valuer, ok := v.(driver.Valuer); ok {
-							v, _ = valuer.Value()
-						}
-
-						err = field.ReflectValueOf(value).Addr().Interface().(sql.Scanner).Scan(v)
-					}
-					return
-				}
-			} else {
-				field.Set = func(value reflect.Value, v interface{}) (err error) {
-					return fallbackSetter(value, v, field.Set)
-				}
-			}
+		field.Set = func(value reflect.Value, v interface{}) (err error) {
+			return fallbackSetter(value, v, field.Set)
 		}
 	}
 }

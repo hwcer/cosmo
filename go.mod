@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/hwcer/cosgo v0.0.0-20220823090949-f918153190e3
 	github.com/hwcer/logger v0.0.0-20220823102841-a48fa936c4f4
-	github.com/jinzhu/now v1.1.4
 	go.mongodb.org/mongo-driver v1.10.1
 )
 
