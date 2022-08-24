@@ -1,10 +1,10 @@
 module github.com/hwcer/cosmo
 
-go 1.18
+go 1.17
 
 require (
-	github.com/hwcer/cosgo v0.0.0-20220824031802-dd74ab81616c
-	github.com/hwcer/logger v0.0.0-20220824032233-d521abb0ee68
+	github.com/hwcer/cosgo v0.0.1
+	github.com/hwcer/logger v0.0.1
 	go.mongodb.org/mongo-driver v1.10.1
 )
 
