@@ -31,15 +31,16 @@ hostX:portX 多个 mongos 的地址列表
 ?options 指定额外的连接选项
 
 read preference
-    1）primary ： 主节点，默认模式，读操作只在主节点，如果主节点不可用，报错或者抛出异常。
 
-    2）primaryPreferred：首选主节点，大多情况下读操作在主节点，如果主节点不可用，如故障转移，读操作在从节点。
+	1）primary ： 主节点，默认模式，读操作只在主节点，如果主节点不可用，报错或者抛出异常。
 
-    3）secondary：从节点，读操作只在从节点， 如果从节点不可用，报错或者抛出异常。
+	2）primaryPreferred：首选主节点，大多情况下读操作在主节点，如果主节点不可用，如故障转移，读操作在从节点。
 
-    4）secondaryPreferred：首选从节点，大多情况下读操作在从节点，特殊情况（如单主节点架构）读操作在主节点。
+	3）secondary：从节点，读操作只在从节点， 如果从节点不可用，报错或者抛出异常。
 
-    5）nearest：最邻近节点，读操作在最邻近的成员，可能是主节点或者从节点。
+	4）secondaryPreferred：首选从节点，大多情况下读操作在从节点，特殊情况（如单主节点架构）读操作在主节点。
+
+	5）nearest：最邻近节点，读操作在最邻近的成员，可能是主节点或者从节点。
 */
 func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Client, err error) {
 	if !strings.HasPrefix(address, "mongodb") {
@@ -57,4 +58,9 @@ func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Cl
 		return
 	}
 	return
+}
+
+func NewClientOptions() *options.ClientOptions {
+	opts := &options.ClientOptions{}
+	return opts
 }
