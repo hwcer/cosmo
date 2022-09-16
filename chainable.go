@@ -6,10 +6,11 @@ import (
 )
 
 // Model specify the model you would like to run db operations
-//    // update all users's name to `hello`
-//    db.Model(&User{}).Update("name", "hello")
-//    // if user's primary key is non-blank, will use it as condition, then will only update the user's name to `hello`
-//    db.Model(&user).Update("name", "hello")
+//
+//	// update all users's name to `hello`
+//	db.Model(&User{}).Update("name", "hello")
+//	// if user's primary key is non-blank, will use it as condition, then will only update the user's name to `hello`
+//	db.Model(&user).Update("name", "hello")
 func (db *DB) Model(value interface{}) (tx *DB) {
 	tx = db.getInstance()
 	tx.Statement.Model = value
@@ -17,7 +18,7 @@ func (db *DB) Model(value interface{}) (tx *DB) {
 }
 
 // Table specify the table you would like to run db operations
-//使用TABLE 时select,order,Omit 中必须使用数据库字段名称
+// 使用TABLE 时select,order,Omit 中必须使用数据库字段名称
 func (db *DB) Table(name string) (tx *DB) {
 	tx = db.getInstance()
 	tx.Statement.Table = name
@@ -54,7 +55,7 @@ func (db *DB) Omit(columns ...string) (tx *DB) {
 }
 
 // Where 查询条件
-//参考 query包
+// 参考 query包
 func (db *DB) Where(query interface{}, args ...interface{}) (tx *DB) {
 	tx = db.getInstance()
 	tx.Statement.Clause.Where(query, args...)
@@ -91,7 +92,7 @@ func (db *DB) Offset(offset int) (tx *DB) {
 
 // Merge 只更新Model,不会修改数据库
 // db.Model(m).Merge(i)
-//参数支持 Struct,map[string]interface{}
+// 参数支持 Struct,map[string]interface{}
 func (db *DB) Merge(i interface{}) error {
 	tx := db.Statement.Parse()
 	if tx.Error != nil {
@@ -108,7 +109,8 @@ func (db *DB) Merge(i interface{}) error {
 }
 
 // SetColumn set column's value
-//   stmt.SetColumn("Name", "jinzhu") // Hooks Method
+//
+//	stmt.SetColumn("Name", "jinzhu") // Hooks Method
 func (db *DB) SetColumn(data map[string]interface{}) error {
 	stmt := db.Statement
 	if stmt.Model == nil || stmt.schema == nil {
