@@ -31,9 +31,9 @@ func cmdCreate(tx *DB) (err error) {
 	return
 }
 
-//Update 通用更新
+// Update 通用更新
 // map ,BuildUpdate.m 支持 $set $incr $setOnInsert, 其他未使用$字段一律视为$set操作
-//支持struct 保存所有非零值
+// 支持struct 保存所有非零值
 func cmdUpdate(tx *DB) (err error) {
 	var data update.Update
 	if data, err = update.Build(tx.Statement.Dest, tx.Statement); err != nil {
@@ -92,7 +92,7 @@ func cmdUpdate(tx *DB) (err error) {
 	return
 }
 
-// Delete delete value match given conditions, if the value has primary key, then will including the primary key as condition
+// delete delete value match given conditions, if the value has primary key, then will including the primary key as condition
 func cmdDelete(tx *DB) (err error) {
 	filter := tx.Statement.Clause.Build(tx.Statement.schema)
 	if len(filter) == 0 {
@@ -111,8 +111,8 @@ func cmdDelete(tx *DB) (err error) {
 	return
 }
 
-//Find find records that match given conditions
-//dest must be a pointer to a slice
+// Find find records that match given conditions
+// dest must be a pointer to a slice
 func cmdQuery(tx *DB) (err error) {
 	filter := tx.Statement.Clause.Build(tx.Statement.schema)
 	//b, _ := json.Marshal(filter)

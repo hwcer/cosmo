@@ -19,7 +19,7 @@ func (tx *DB) reset() {
 	tx.Statement.multiple = false
 }
 
-//View 分页查询
+// View 分页查询
 func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	var err error
 	if paging.Page == 0 || paging.Size == 0 {
@@ -82,14 +82,14 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	cursor.RemainingBatchLength()
 	if err = cursor.All(stmt.Context, &paging.Rows); err == nil {
 		tx.RowsAffected = int64(reflectRows.Len())
-	}else {
+	} else {
 		tx.Error = err
 	}
 	return tx
 }
 
-//Find find records that match given conditions
-//dest must be a pointer to a slice
+// Find find records that match given conditions
+// dest must be a pointer to a slice
 func (db *DB) Find(dest interface{}, conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
@@ -124,10 +124,10 @@ func (db *DB) Update(values interface{}, conds ...interface{}) (tx *DB) {
 }
 
 // Delete 删除记录
-//db.Delete(&User{Id:1,name:"myname"})  匹配 _id=1
-//db.Model(&User).Delete(1) 匹配 _id=1
-//db.Model(&User).Delete([]int{1,2,3}) 匹配 _id IN (1,2,3)
-//db.Model(&User).Delete("name = ?","myname") 匹配 name=myname
+// db.delete(&User{Id:1,name:"myname"})  匹配 _id=1
+// db.Model(&User).delete(1) 匹配 _id=1
+// db.Model(&User).delete([]int{1,2,3}) 匹配 _id IN (1,2,3)
+// db.Model(&User).delete("name = ?","myname") 匹配 name=myname
 func (db *DB) Delete(conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
