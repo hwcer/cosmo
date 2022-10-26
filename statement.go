@@ -36,7 +36,7 @@ type Statement struct {
 	multiple bool
 }
 
-//Parse Parse model to schema
+// Parse Parse model to schema
 func (stmt *Statement) Parse() (tx *DB) {
 	tx = stmt.DB
 	if tx.Error != nil {
@@ -87,7 +87,7 @@ func (stmt *Statement) Parse() (tx *DB) {
 	return
 }
 
-//DBName 将对象字段转换成数据库字段
+// DBName 将对象字段转换成数据库字段
 func (stmt *Statement) DBName(name string) string {
 	if stmt.schema == nil {
 		return name
@@ -98,7 +98,7 @@ func (stmt *Statement) DBName(name string) string {
 	return name
 }
 
-//Order 排序
+// Order 排序
 func (stmt *Statement) Order() (order bson.D) {
 	for _, v := range stmt.paging.order {
 		v.Key = stmt.DBName(v.Key)
@@ -111,8 +111,8 @@ func (stmt *Statement) Schema() *schema.Schema {
 	return stmt.schema
 }
 
-//Projection 不能同时使用Select和Omit 优先Select生效
-//可以使用model属性名或者数据库字段名
+// Projection 不能同时使用Select和Omit 优先Select生效
+// 可以使用model属性名或者数据库字段名
 func (stmt *Statement) Projection() map[string]int {
 	projection := make(map[string]int)
 	for _, k := range stmt.Selects {

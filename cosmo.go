@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hwcer/logger"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -180,4 +181,8 @@ func (db *DB) Use(plugin Plugin) error {
 	}
 	db.Plugins[name] = plugin
 	return nil
+}
+
+func (db *DB) ObjectID() primitive.ObjectID {
+	return primitive.NewObjectID()
 }
