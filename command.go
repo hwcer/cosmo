@@ -139,12 +139,20 @@ func cmdQuery(tx *DB) (err error) {
 			opts.SetProjection(projection)
 		}
 		result := coll.FindOne(tx.Statement.Context, filter, opts)
-		if result.Err() == nil {
-			if err = result.Decode(tx.Statement.Dest); err == nil {
-				tx.RowsAffected = 1
+		if err = result.Err(); err != nil {
+			if err == mongo.ErrNoDocuments {
+				err = nil
 			}
-		} else if result.Err() != mongo.ErrNoDocuments {
-			err = result.Err()
+			return
+		}
+		switch v := tx.Statement.Dest.(type) {
+		case *[]byte:
+			*v, err = result.DecodeBytes()
+		default:
+			err = result.Decode(tx.Statement.Dest)
+		}
+		if err == nil {
+			tx.RowsAffected = 1
 		}
 	} else {
 		opts := options.Find()
