@@ -118,6 +118,7 @@ func (db *DB) Collection(model interface{}) (tx *DB, coll *mongo.Collection) {
 // BulkWrite 批量写入
 func (db *DB) BulkWrite(model interface{}) *BulkWrite {
 	tx := db.Model(model)
+	tx = tx.Statement.Parse()
 	return &BulkWrite{tx: tx}
 }
 

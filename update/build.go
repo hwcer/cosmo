@@ -14,7 +14,7 @@ type SetOnInsert interface {
 	SetOnInsert() (map[string]interface{}, error)
 }
 
-//Build 使用当前模型，将map bson.m Struct 转换成Update
+// Build 使用当前模型，将map bson.m Struct 转换成Update
 // 如果设置了model i为bson.m可以使用数据库名和model名
 // selects 针对Struct更新时选择，或者忽略的字段，如果为空，更新所有非零值字段
 func Build(i interface{}, stmt statement.Statement) (update Update, err error) {
@@ -39,8 +39,8 @@ func Build(i interface{}, stmt statement.Statement) (update Update, err error) {
 	return
 }
 
-//parseMap 使用Map修改数据 map,bson.M 被视为使用 $set 操作
-//高级提交需要使用 Update
+// parseMap 使用Map修改数据 map,bson.M 被视为使用 $set 操作
+// 高级提交需要使用 Update
 func parseMap(dest interface{}, stmt statement.Statement) (update Update, err error) {
 	var destMap bson.M
 	switch dest.(type) {
@@ -73,6 +73,9 @@ func parseMap(dest interface{}, stmt statement.Statement) (update Update, err er
 func parseStruct(reflectValue reflect.Value, stmt statement.Statement) (update Update, err error) {
 	update = make(Update)
 	sch := stmt.Schema()
+	if sch == nil {
+		return nil, errors.New("Update model不能为空")
+	}
 	projection := stmt.Projection()
 	selects := int(-1)
 	if len(projection) > 0 {

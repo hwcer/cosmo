@@ -15,6 +15,9 @@ type BulkWrite struct {
 }
 
 func (this *BulkWrite) Save() (result *mongo.BulkWriteResult, err error) {
+	if this.tx.Statement.Error != nil {
+		return nil, this.tx.Statement.Error
+	}
 	if len(this.models) == 0 {
 		return nil, nil
 	}
@@ -32,8 +35,11 @@ func (this *BulkWrite) Save() (result *mongo.BulkWriteResult, err error) {
 func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	upsert, _ := update.Build(data, this.tx.Statement)
-
+	upsert, err := update.Build(data, this.tx.Statement)
+	if err != nil {
+		_ = this.tx.Errorf(err)
+		return
+	}
 	model := mongo.NewUpdateOneModel()
 	model.SetFilter(query.Build(this.tx.Statement.schema))
 	model.SetUpdate(upsert)

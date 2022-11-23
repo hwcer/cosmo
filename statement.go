@@ -64,7 +64,7 @@ func (stmt *Statement) Parse() (tx *DB) {
 		stmt.schema, err = schema.Parse(stmt.ReflectValue, Options)
 	}
 	if err != nil {
-		tx.Errorf(err)
+		_ = tx.Errorf(err)
 		return
 	}
 	if stmt.Table == "" {
