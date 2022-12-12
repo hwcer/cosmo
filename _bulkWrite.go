@@ -12,19 +12,18 @@ type BulkWrite struct {
 	tx     *DB
 	opts   []*options.BulkWriteOptions
 	models []mongo.WriteModel
-	result *mongo.BulkWriteResult
 }
 
-func (this *BulkWrite) Save() (err error) {
+func (this *BulkWrite) Save() (result *mongo.BulkWriteResult, err error) {
 	if this.tx.Statement.Error != nil {
-		return this.tx.Statement.Error
+		return nil, this.tx.Statement.Error
 	}
 	if len(this.models) == 0 {
-		return nil
+		return nil, nil
 	}
 	tx := this.tx.callbacks.Call(this.tx, func(db *DB) error {
 		coll := db.client.Database(db.dbname).Collection(db.Statement.Table)
-		if this.result, err = coll.BulkWrite(context.Background(), this.models, this.opts...); err == nil {
+		if result, err = coll.BulkWrite(context.Background(), this.models, this.opts...); err == nil {
 			this.models = nil
 		}
 		return err
@@ -73,12 +72,4 @@ func (this *BulkWrite) Delete(where ...interface{}) {
 		model.SetFilter(filter)
 		this.models = append(this.models, model)
 	}
-}
-
-func (this *BulkWrite) Result() *mongo.BulkWriteResult {
-	return this.result
-}
-
-func (this *BulkWrite) Options(opts ...*options.BulkWriteOptions) {
-	this.opts = append(this.opts, opts...)
 }

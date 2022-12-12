@@ -2,14 +2,15 @@ module github.com/hwcer/cosmo
 
 go 1.17
 
+replace github.com/hwcer/cosgo v0.0.1 => ../cosgo
+
 require (
 	github.com/hwcer/cosgo v0.0.1
-	github.com/hwcer/logger v0.0.1
 	go.mongodb.org/mongo-driver v1.10.1
 )
 
 require (
-	github.com/golang/snappy v0.0.1 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pkg/errors v0.9.1 // indirect

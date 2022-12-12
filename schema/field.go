@@ -3,8 +3,8 @@ package schema
 import (
 	"database/sql/driver"
 	"fmt"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosmo/utils"
-	"github.com/hwcer/logger"
 	"reflect"
 	"strconv"
 )
