@@ -28,24 +28,26 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	if paging.Rows == nil {
 		paging.Rows = []bson.M{}
 	}
-	reflectRows := reflect.Indirect(reflect.ValueOf(paging.Rows))
-	if reflectRows.Kind() != reflect.Array && reflectRows.Kind() != reflect.Slice {
-		tx.Errorf("paging.Rows type not Array or Slice")
-	}
 	tx = db.getInstance()
+	reflectRows := reflect.ValueOf(paging.Rows)
+	indirectRows := reflect.Indirect(reflectRows)
+	if indirectRows.Kind() != reflect.Array && indirectRows.Kind() != reflect.Slice {
+		_ = tx.Errorf("paging.Rows type not Array or Slice")
+		return
+	}
 	if len(conds) > 0 {
-		tx = db.Where(conds[0], conds[1:]...)
+		tx = tx.Where(conds[0], conds[1:]...)
 	}
 	tx.Page(paging.Page, paging.Size)
 	tx.Statement.Dest = paging.Rows
-	tx = db.Statement.Parse()
+	tx = tx.Statement.Parse()
 	if tx.Error != nil {
 		return
 	}
 
 	stmt := tx.Statement
 	if stmt.Table == "" {
-		tx.Errorf("Table not set, please set it like: db.Model(&user) or db.Table(\"users\") %+v")
+		_ = tx.Errorf("Table not set, please set it like: db.Model(&user) or db.Table(\"users\") %+v")
 		return
 	}
 	defer tx.reset()
@@ -80,8 +82,13 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 		return
 	}
 	cursor.RemainingBatchLength()
-	if err = cursor.All(stmt.Context, &paging.Rows); err == nil {
-		tx.RowsAffected = int64(reflectRows.Len())
+	if reflectRows.Kind() == reflect.Ptr {
+		err = cursor.All(stmt.Context, paging.Rows)
+	} else {
+		err = cursor.All(stmt.Context, &paging.Rows)
+	}
+	if err == nil {
+		tx.RowsAffected = int64(indirectRows.Len())
 	} else {
 		tx.Error = err
 	}
