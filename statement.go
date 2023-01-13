@@ -2,8 +2,8 @@ package cosmo
 
 import (
 	"context"
+	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
-	"github.com/hwcer/cosmo/schema"
 	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
 )
@@ -26,14 +26,15 @@ type Statement struct {
 	Model        interface{}
 	ReflectValue reflect.Value
 	//ReflectModel reflect.Value
-	Omits    []string // omit columns
-	Selects  []string // selected columns
-	Context  context.Context
-	Clause   *clause.Query
-	paging   *Paging
-	schema   *schema.Schema
-	settings map[string]interface{}
-	multiple bool
+	Omits         []string // omit columns
+	Selects       []string // selected columns
+	Context       context.Context
+	Clause        *clause.Query
+	paging        *Paging
+	schema        *schema.Schema
+	settings      map[string]interface{}
+	multiple      bool
+	findAndUpdate bool //更新
 }
 
 // Parse Parse model to schema
@@ -56,34 +57,43 @@ func (stmt *Statement) Parse() (tx *DB) {
 			return
 		}
 	}
-
 	var err error
+	var sch *schema.Schema
 	if stmt.Model != nil {
-		stmt.schema, err = schema.Parse(stmt.Model, Options)
+		sch, err = schema.Parse(stmt.Model)
 	} else {
-		stmt.schema, err = schema.Parse(stmt.ReflectValue, Options)
+		if sch, err = schema.Parse(stmt.ReflectValue); err == nil {
+			stmt.schema = sch
+		}
 	}
 	if err != nil {
 		_ = tx.Errorf(err)
 		return
 	}
 	if stmt.Table == "" {
-		stmt.Table = stmt.schema.Table
+		stmt.Table = sch.Table
+	}
+	if stmt.schema == nil {
+		stmt.schema = sch
+	}
+
+	if stmt.Clause.Len() == 0 {
+		_ = tx.Errorf(ErrMissingWhereClause)
 	}
 	//空查询，匹配Dest或者Model中的主键
-	if stmt.Clause.Len() == 0 {
-		var reflectValue reflect.Value
-		if stmt.Model != nil {
-			reflectValue = reflect.Indirect(reflect.ValueOf(stmt.Model))
-		} else if stmt.ReflectValue.Kind() == reflect.Struct {
-			reflectValue = stmt.ReflectValue
-		}
-		if reflectValue.IsValid() && !reflectValue.IsZero() {
-			if v := tx.Statement.schema.GetValue(reflectValue, clause.MongoPrimaryName); v != nil {
-				tx.Where(v)
-			}
-		}
-	}
+	//if stmt.Clause.Len() == 0 {
+	//	var reflectValue reflect.Value
+	//	if stmt.Model != nil {
+	//		reflectValue = reflect.Indirect(reflect.ValueOf(stmt.Model))
+	//	} else if stmt.ReflectValue.Kind() == reflect.Struct {
+	//		reflectValue = stmt.ReflectValue
+	//	}
+	//	if reflectValue.IsValid() && !reflectValue.IsZero() {
+	//		if v := tx.Statement.schema.GetValue(reflectValue, clause.MongoPrimaryName); v != nil {
+	//			tx.Where(v)
+	//		}
+	//	}
+	//}
 	return
 }
 

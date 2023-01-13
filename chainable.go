@@ -1,6 +1,7 @@
 package cosmo
 
 import (
+	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/update"
 	"reflect"
 )
@@ -19,6 +20,7 @@ func (db *DB) Model(value interface{}) (tx *DB) {
 
 // Table specify the table you would like to run db operations
 // 使用TABLE 时select,order,Omit 中必须使用数据库字段名称
+
 func (db *DB) Table(name string) (tx *DB) {
 	tx = db.getInstance()
 	tx.Statement.Table = name
@@ -51,6 +53,13 @@ func (db *DB) Omit(columns ...string) (tx *DB) {
 		return
 	}
 	tx.Statement.Omits = append(tx.Statement.Omits, columns...)
+	return
+}
+
+// FindAndUpdate 查询并更新,需要配合Select使用
+func (db *DB) FindAndUpdate() (tx *DB) {
+	tx = db.getInstance()
+	tx.Statement.findAndUpdate = true
 	return
 }
 
@@ -98,7 +107,7 @@ func (db *DB) Merge(i interface{}) error {
 	if tx.Error != nil {
 		return tx.Error
 	}
-	values, err := update.Build(i, tx.Statement)
+	values, err := update.Build(i, tx.Statement.schema, tx.Statement.Projection())
 	if err != nil {
 		return err
 	}
@@ -113,28 +122,23 @@ func (db *DB) Merge(i interface{}) error {
 //	stmt.SetColumn("Name", "jinzhu") // Hooks Method
 func (db *DB) SetColumn(data map[string]interface{}) error {
 	stmt := db.Statement
-	if stmt.Model == nil || stmt.schema == nil {
+	var sch *schema.Schema
+	var reflectValue reflect.Value
+
+	if stmt.ReflectValue.Kind() == reflect.Struct {
+		sch = stmt.schema
+		reflectValue = stmt.ReflectValue
+	} else if stmt.Model != nil {
+		sch, _ = schema.Parse(stmt.Model)
+		reflectValue = reflect.ValueOf(stmt.Model)
+	} else {
 		return nil
 	}
-	reflectModel := reflect.Indirect(reflect.ValueOf(stmt.Model))
-	if !reflectModel.IsValid() {
-		//logger.Debug("reflectModel Is Not Valid")
-		return nil
-	}
-	//if reflectModel.IsZero() {
-	//	logger.Debug("reflectModel Is Zero")
-	//	return nil
-	//}
-	//if stmt.schema == nil {
-	//	if tx := stmt.ParseId(); tx.Error != nil {
-	//		return tx.Error
-	//	}
-	//}
 	//logger.Debug("reflectModel:%+v", reflectModel.Interface())
 	for k, v := range data {
-		field := stmt.schema.LookUpField(k)
+		field := sch.LookUpField(k)
 		if field != nil {
-			if err := field.Set(reflectModel, v); err != nil {
+			if err := field.Set(reflectValue, v); err != nil {
 				return err
 			}
 		}

@@ -1,8 +1,8 @@
 package clause
 
-import "github.com/hwcer/cosmo/schema"
+import "github.com/hwcer/cosgo/schema"
 
-//Build 生成mongo查询条件
+// Build 生成mongo查询条件
 func (q *Query) Build(model *schema.Schema) Filter {
 	filter := make(Filter)
 	for _, node := range q.where {

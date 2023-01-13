@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hwcer/cosgo/logger"
-	"github.com/hwcer/cosmo/schema"
+	"github.com/hwcer/cosgo/schema"
 	"go.mongodb.org/mongo-driver/mongo"
 	"strings"
 )
@@ -13,7 +13,7 @@ import (
 // Sparse
 func (db *DB) AutoMigrator(dst ...interface{}) error {
 	for _, mod := range dst {
-		sch, err := schema.Parse(mod, Options)
+		sch, err := schema.Parse(mod)
 		if err != nil {
 			return err
 		}

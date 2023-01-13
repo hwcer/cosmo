@@ -1,6 +1,6 @@
 package statement
 
-import "github.com/hwcer/cosmo/schema"
+import "github.com/hwcer/cosgo/schema"
 
 type Statement interface {
 	DBName(name string) string

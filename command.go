@@ -36,7 +36,8 @@ func cmdCreate(tx *DB) (err error) {
 // 支持struct 保存所有非零值
 func cmdUpdate(tx *DB) (err error) {
 	var data update.Update
-	if data, err = update.Build(tx.Statement.Dest, tx.Statement); err != nil {
+	projection := tx.Statement.Projection()
+	if data, err = update.Build(tx.Statement.Dest, tx.Statement.schema, projection); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)
@@ -47,21 +48,20 @@ func cmdUpdate(tx *DB) (err error) {
 	}
 	//fmt.Printf("Update filter:%+v\n", filter)
 	coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
-	reflectModel := reflect.Indirect(reflect.ValueOf(tx.Statement.Model))
+	//reflectModel := reflect.Indirect(reflect.ValueOf(tx.Statement.Model))
 	if tx.Statement.multiple || clause.Multiple(filter) {
 		opts := options.Update()
 		var result *mongo.UpdateResult
 		if result, err = coll.UpdateMany(tx.Statement.Context, filter, data, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
 		}
-	} else if reflectModel.IsValid() {
+	} else if tx.Statement.findAndUpdate {
 		opts := options.FindOneAndUpdate()
 		if _, ok := data[MongoSetOnInsert]; ok {
 			opts.SetUpsert(true)
 		}
 		opts.SetReturnDocument(options.After)
 
-		projection := tx.Statement.Projection()
 		if len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
