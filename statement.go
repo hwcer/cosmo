@@ -77,9 +77,9 @@ func (stmt *Statement) Parse() (tx *DB) {
 		stmt.schema = sch
 	}
 
-	if stmt.Clause.Len() == 0 {
-		_ = tx.Errorf(ErrMissingWhereClause)
-	}
+	//if stmt.Clause.Len() == 0 {
+	//	_ = tx.Errorf(ErrMissingWhereClause)
+	//}
 	//空查询，匹配Dest或者Model中的主键
 	//if stmt.Clause.Len() == 0 {
 	//	var reflectValue reflect.Value
