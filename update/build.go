@@ -61,7 +61,7 @@ func parseMap(dest interface{}, sch *schema.Schema, filter map[string]int) (upda
 	for k, v := range destMap {
 		if field := sch.LookUpField(k); field != nil {
 			name := field.DBName
-			if filter[name] >= 0 {
+			if selected(filter, name) {
 				update.Set(name, v)
 			}
 		}
@@ -76,7 +76,7 @@ func parseStruct(dest interface{}, reflectValue reflect.Value, sch *schema.Schem
 		if !v.IsValid() || field.DBName == clause.MongoPrimaryName || (len(filter) > 0 && filter[field.DBName] < 0) {
 			continue
 		}
-		if filter[field.DBName] > 0 || !v.IsZero() {
+		if selected(filter, field.DBName) || (len(filter) == 0 && !v.IsZero()) {
 			update.Set(field.DBName, v.Interface())
 		}
 	}
@@ -88,4 +88,20 @@ func parseStruct(dest interface{}, reflectValue reflect.Value, sch *schema.Schem
 		}
 	}
 	return
+}
+
+func selected(filter map[string]int, key string) bool {
+	if len(filter) == 0 {
+		return true
+	}
+	var v int
+	for _, v = range filter {
+		break
+	}
+	if v > 0 {
+		return filter[key] > 0
+	} else {
+		_, ok := filter[key]
+		return ok
+	}
 }
