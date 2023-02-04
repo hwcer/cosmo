@@ -63,7 +63,6 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	}
 	//find
 	order := tx.Statement.Order()
-	projection := tx.Statement.Projection()
 	opts := options.Find()
 	if stmt.paging.limit > 0 {
 		opts.SetLimit(int64(tx.Statement.paging.limit))
@@ -74,7 +73,7 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	if len(order) > 0 {
 		opts.SetSort(order)
 	}
-	if len(projection) > 0 {
+	if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
 		opts.SetProjection(projection)
 	}
 	var cursor *mongo.Cursor

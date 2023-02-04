@@ -36,8 +36,7 @@ func cmdCreate(tx *DB) (err error) {
 // 支持struct 保存所有非零值
 func cmdUpdate(tx *DB) (err error) {
 	var data update.Update
-	projection := tx.Statement.Projection()
-	if data, err = update.Build(tx.Statement.Dest, tx.Statement.schema, projection); err != nil {
+	if data, err = update.Build(tx.Statement.Dest, tx.Statement.schema, &tx.Statement.Selector); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)
@@ -62,7 +61,7 @@ func cmdUpdate(tx *DB) (err error) {
 		}
 		opts.SetReturnDocument(options.After)
 
-		if len(projection) > 0 {
+		if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
 		values := make(map[string]interface{})
@@ -125,7 +124,7 @@ func cmdQuery(tx *DB) (err error) {
 		multiple = false
 	}
 	order := tx.Statement.Order()
-	projection := tx.Statement.Projection()
+
 	coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
 	if !multiple {
 		opts := options.FindOne()
@@ -135,7 +134,7 @@ func cmdQuery(tx *DB) (err error) {
 		if len(order) > 0 {
 			opts.SetSort(order)
 		}
-		if len(projection) > 0 {
+		if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
 		result := coll.FindOne(tx.Statement.Context, filter, opts)
@@ -165,7 +164,7 @@ func cmdQuery(tx *DB) (err error) {
 		if len(order) > 0 {
 			opts.SetSort(order)
 		}
-		if len(projection) > 0 {
+		if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
 		var cursor *mongo.Cursor

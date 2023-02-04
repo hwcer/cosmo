@@ -37,22 +37,18 @@ func (db *DB) Multiple() (tx *DB) {
 // Select specify fields that you want when querying, creating, updating
 func (db *DB) Select(columns ...string) (tx *DB) {
 	tx = db.getInstance()
-	if len(tx.Statement.Omits) > 0 {
+	if !tx.Statement.Selector.Select(columns...) {
 		tx.Error = ErrSelectOnOmitsExist
-		return
 	}
-	tx.Statement.Selects = append(tx.Statement.Selects, columns...)
 	return
 }
 
 // Omit specify fields that you want to ignore when creating, updating and querying
 func (db *DB) Omit(columns ...string) (tx *DB) {
 	tx = db.getInstance()
-	if len(tx.Statement.Selects) > 0 {
+	if !tx.Statement.Selector.Select(columns...) {
 		tx.Error = ErrOmitOnSelectsExist
-		return
 	}
-	tx.Statement.Omits = append(tx.Statement.Omits, columns...)
 	return
 }
 
@@ -107,7 +103,7 @@ func (db *DB) Merge(i interface{}) error {
 	if tx.Error != nil {
 		return tx.Error
 	}
-	values, err := update.Build(i, tx.Statement.schema, tx.Statement.Projection())
+	values, err := update.Build(i, tx.Statement.schema, &tx.Statement.Selector)
 	if err != nil {
 		return err
 	}

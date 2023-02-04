@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
+	"github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
 )
@@ -24,10 +25,11 @@ type Statement struct {
 	Dest         interface{}
 	Table        string
 	Model        interface{}
+	Selector     update.Selector
 	ReflectValue reflect.Value
 	//ReflectModel reflect.Value
-	Omits         []string // omit columns
-	Selects       []string // selected columns
+	//Omits         []string // omit columns
+	//Selects       []string // selected columns
 	Context       context.Context
 	Clause        *clause.Query
 	paging        *Paging
@@ -123,16 +125,16 @@ func (stmt *Statement) Schema() *schema.Schema {
 
 // Projection 不能同时使用Select和Omit 优先Select生效
 // 可以使用model属性名或者数据库字段名
-func (stmt *Statement) Projection() map[string]int {
-	projection := make(map[string]int)
-	for _, k := range stmt.Selects {
-		projection[stmt.DBName(k)] = 1
-	}
-	if len(projection) > 0 {
-		return projection
-	}
-	for _, k := range stmt.Omits {
-		projection[stmt.DBName(k)] = 0
-	}
-	return projection
-}
+//func (stmt *Statement) Projection() map[string]int {
+//	projection := make(map[string]int)
+//	for _, k := range stmt.Selects {
+//		projection[stmt.DBName(k)] = 1
+//	}
+//	if len(projection) > 0 {
+//		return projection
+//	}
+//	for _, k := range stmt.Omits {
+//		projection[stmt.DBName(k)] = 0
+//	}
+//	return projection
+//}
