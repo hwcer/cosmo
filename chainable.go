@@ -46,7 +46,7 @@ func (db *DB) Select(columns ...string) (tx *DB) {
 // Omit specify fields that you want to ignore when creating, updating and querying
 func (db *DB) Omit(columns ...string) (tx *DB) {
 	tx = db.getInstance()
-	if !tx.Statement.Selector.Select(columns...) {
+	if !tx.Statement.Selector.Omit(columns...) {
 		tx.Error = ErrOmitOnSelectsExist
 	}
 	return
