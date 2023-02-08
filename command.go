@@ -84,6 +84,7 @@ func cmdUpdate(tx *DB) (err error) {
 			tx.RowsAffected = result.MatchedCount
 		}
 	}
+
 	if err != nil {
 		tx.Error = err
 		return
