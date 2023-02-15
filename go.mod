@@ -2,10 +2,10 @@ module github.com/hwcer/cosmo
 
 go 1.18
 
-replace github.com/hwcer/cosgo v0.0.1 => ../cosgo
+replace github.com/hwcer/cosgo v0.0.0 => ../cosgo
 
 require (
-	github.com/hwcer/cosgo v0.0.1
+	github.com/hwcer/cosgo v0.0.0
 	go.mongodb.org/mongo-driver v1.11.1
 )
 
