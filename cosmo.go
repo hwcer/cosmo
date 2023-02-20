@@ -128,21 +128,21 @@ func (db *DB) WithContext(ctx context.Context) *DB {
 }
 
 // Set store value with key into current db instance's context
-func (db *DB) Set(key string, value interface{}) *DB {
-	tx := db.getInstance()
-	setting := map[string]interface{}{}
-	for k, v := range tx.Statement.settings {
-		setting[k] = v
-	}
-	tx.Statement.settings = setting
-	return tx
-}
-
-// Get get value with key from current db instance's context
-func (db *DB) Get(key string) (val interface{}, ok bool) {
-	val, ok = db.Statement.settings[key]
-	return
-}
+//func (db *DB) Set(key string, value interface{}) *DB {
+//	tx := db.getInstance()
+//	setting := map[string]interface{}{}
+//	for k, v := range tx.Statement.settings {
+//		setting[k] = v
+//	}
+//	tx.Statement.settings = setting
+//	return tx
+//}
+//
+//// Get get value with key from current db instance's context
+//func (db *DB) Get(key string) (val interface{}, ok bool) {
+//	val, ok = db.Statement.settings[key]
+//	return
+//}
 
 // Errorf add error to db
 func (db *DB) Errorf(msg interface{}, args ...interface{}) error {

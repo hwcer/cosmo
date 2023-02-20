@@ -11,11 +11,11 @@ import (
 
 func NewStatement(db *DB) *Statement {
 	return &Statement{
-		DB:       db,
-		Context:  context.Background(),
-		Clause:   clause.New(),
-		paging:   &Paging{},
-		settings: map[string]interface{}{},
+		DB:      db,
+		Context: context.Background(),
+		Clause:  clause.New(),
+		paging:  &Paging{},
+		//settings: map[string]interface{}{},
 	}
 }
 
@@ -27,16 +27,15 @@ type Statement struct {
 	Model        interface{}
 	Selector     update.Selector
 	ReflectValue reflect.Value
-	//ReflectModel reflect.Value
-	//Omits         []string // omit columns
-	//Selects       []string // selected columns
-	Context       context.Context
-	Clause        *clause.Query
-	paging        *Paging
-	schema        *schema.Schema
-	settings      map[string]interface{}
-	multiple      bool
-	findAndUpdate bool //更新
+	Context      context.Context
+	Clause       *clause.Query
+	paging       *Paging
+	schema       *schema.Schema
+	//settings   map[string]interface{}
+	upsert     bool
+	multiple   bool
+	projection map[string]int //findAndUpdate 时需要返回的字段
+	//findAndUpdate bool           //更新
 }
 
 // Parse Parse model to schema

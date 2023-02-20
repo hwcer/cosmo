@@ -48,22 +48,22 @@ func cmdUpdate(tx *DB) (err error) {
 	//fmt.Printf("Update filter:%+v\n", filter)
 	coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
 	//reflectModel := reflect.Indirect(reflect.ValueOf(tx.Statement.Model))
-	if tx.Statement.multiple || clause.Multiple(filter) {
+	if tx.Statement.multiple {
 		opts := options.Update()
 		var result *mongo.UpdateResult
 		if result, err = coll.UpdateMany(tx.Statement.Context, filter, data, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
 		}
-	} else if tx.Statement.findAndUpdate {
+	} else if len(tx.Statement.projection) > 0 {
 		opts := options.FindOneAndUpdate()
-		if _, ok := data[MongoSetOnInsert]; ok {
+		if _, ok := data[MongoSetOnInsert]; ok || tx.Statement.upsert {
 			opts.SetUpsert(true)
 		}
 		opts.SetReturnDocument(options.After)
-
-		if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
-			opts.SetProjection(projection)
-		}
+		opts.SetProjection(tx.Statement.projection)
+		//if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
+		//
+		//}
 		values := make(map[string]interface{})
 		if updateResult := coll.FindOneAndUpdate(tx.Statement.Context, filter, data, opts); updateResult.Err() == nil {
 			tx.RowsAffected = 1
@@ -76,7 +76,7 @@ func cmdUpdate(tx *DB) (err error) {
 		}
 	} else {
 		opts := options.Update()
-		if _, ok := data[MongoSetOnInsert]; ok {
+		if _, ok := data[MongoSetOnInsert]; ok || tx.Statement.upsert {
 			opts.SetUpsert(true)
 		}
 		var result *mongo.UpdateResult

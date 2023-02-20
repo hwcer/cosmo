@@ -27,10 +27,29 @@ func (db *DB) Table(name string) (tx *DB) {
 	return
 }
 
-// Multiple 强制批量操作
-func (db *DB) Multiple() (tx *DB) {
+// SetUpsert update时如果不存在自动insert
+func (db *DB) SetUpsert() (tx *DB) {
+	tx = db.getInstance()
+	tx.Statement.upsert = true
+	return
+}
+
+// SetMultiple 强制批量操作
+func (db *DB) SetMultiple() (tx *DB) {
 	tx = db.getInstance()
 	tx.Statement.multiple = true
+	return
+}
+
+// SetProjection FindAndUpdate时要求返回的字段
+func (db *DB) SetProjection(keys ...string) (tx *DB) {
+	tx = db.getInstance()
+	if tx.Statement.projection == nil {
+		tx.Statement.projection = map[string]int{}
+	}
+	for _, k := range keys {
+		tx.Statement.projection[k] = 1
+	}
 	return
 }
 
@@ -53,11 +72,11 @@ func (db *DB) Omit(columns ...string) (tx *DB) {
 }
 
 // FindAndUpdate 查询并更新,需要配合Select使用
-func (db *DB) FindAndUpdate() (tx *DB) {
-	tx = db.getInstance()
-	tx.Statement.findAndUpdate = true
-	return
-}
+//func (db *DB) FindAndUpdate() (tx *DB) {
+//	tx = db.getInstance()
+//	tx.Statement.findAndUpdate = true
+//	return
+//}
 
 // Where 查询条件
 // 参考 query包
