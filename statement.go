@@ -38,6 +38,13 @@ type Statement struct {
 	//findAndUpdate bool           //更新
 }
 
+func (stmt *Statement) HasValidModel() bool {
+	if stmt.Model == nil {
+		return false
+	}
+	return !reflect.ValueOf(stmt.Model).IsNil()
+}
+
 // Parse Parse model to schema
 func (stmt *Statement) Parse() (tx *DB) {
 	tx = stmt.DB

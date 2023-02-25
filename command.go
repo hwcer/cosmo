@@ -55,7 +55,7 @@ func cmdUpdate(tx *DB) (err error) {
 		if result, err = coll.UpdateMany(stmt.Context, filter, data, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
 		}
-	} else if stmt.Model != nil {
+	} else if stmt.HasValidModel() {
 		opts := options.FindOneAndUpdate()
 		if _, ok := data[MongoSetOnInsert]; ok || stmt.upsert {
 			opts.SetUpsert(true)
