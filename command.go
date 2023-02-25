@@ -56,38 +56,50 @@ func cmdUpdate(tx *DB) (err error) {
 			tx.RowsAffected = result.MatchedCount
 		}
 	} else if stmt.HasValidModel() {
-		opts := options.FindOneAndUpdate()
-		if _, ok := data[MongoSetOnInsert]; ok || stmt.upsert {
-			opts.SetUpsert(true)
-		}
-		if projection := stmt.Selector.Projection(stmt.schema); len(projection) > 0 {
-			opts.SetReturnDocument(options.After)
-			opts.SetProjection(projection)
-		}
-		values := make(map[string]interface{})
-		if updateResult := coll.FindOneAndUpdate(stmt.Context, filter, data, opts); updateResult.Err() == nil {
-			tx.RowsAffected = 1
-			err = updateResult.Decode(&values)
+		if projection := stmt.Selector.Projection(stmt.schema); len(projection) == 0 {
+			err = UpdateOne(tx, coll, filter, data)
 		} else {
-			err = updateResult.Err()
-		}
-		if err == nil {
-			_ = tx.SetColumn(values)
+			err = findOneAndUpdate(tx, coll, filter, data, projection)
 		}
 	} else {
-		opts := options.Update()
-		if _, ok := data[MongoSetOnInsert]; ok || stmt.upsert {
-			opts.SetUpsert(true)
-		}
-		var result *mongo.UpdateResult
-		if result, err = coll.UpdateOne(stmt.Context, filter, data, opts); err == nil {
-			tx.RowsAffected = result.MatchedCount
-		}
+		err = UpdateOne(tx, coll, filter, data)
 	}
 
 	if err != nil {
 		tx.Error = err
 		return
+	}
+	return
+}
+
+func UpdateOne(tx *DB, coll *mongo.Collection, filter clause.Filter, data update.Update) (err error) {
+	opts := options.Update()
+	if _, ok := data[MongoSetOnInsert]; ok || tx.Statement.upsert {
+		opts.SetUpsert(true)
+	}
+	var result *mongo.UpdateResult
+	if result, err = coll.UpdateOne(tx.Statement.Context, filter, data, opts); err == nil {
+		tx.RowsAffected = result.MatchedCount
+	}
+	return
+}
+
+func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data update.Update, projection map[string]int) (err error) {
+	opts := options.FindOneAndUpdate()
+	if _, ok := data[MongoSetOnInsert]; ok || tx.Statement.upsert {
+		opts.SetUpsert(true)
+	}
+	opts.SetProjection(projection)
+	opts.SetReturnDocument(options.After)
+	values := make(map[string]interface{})
+	if updateResult := coll.FindOneAndUpdate(tx.Statement.Context, filter, data, opts); updateResult.Err() == nil {
+		tx.RowsAffected = 1
+		err = updateResult.Decode(&values)
+	} else {
+		err = updateResult.Err()
+	}
+	if err == nil {
+		_ = tx.SetColumn(values)
 	}
 	return
 }
