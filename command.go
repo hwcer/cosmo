@@ -35,37 +35,37 @@ func cmdCreate(tx *DB) (err error) {
 // map ,BuildUpdate.m 支持 $set $incr $setOnInsert, 其他未使用$字段一律视为$set操作
 // 支持struct 保存所有非零值
 func cmdUpdate(tx *DB) (err error) {
+	stmt := tx.Statement
 	var data update.Update
-	if data, err = update.Build(tx.Statement.Dest, tx.Statement.schema, &tx.Statement.Selector); err != nil {
+	if data, err = update.Build(stmt.Dest, stmt.schema, &stmt.Selector); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)
-	filter := tx.Statement.Clause.Build(tx.Statement.schema)
+	filter := stmt.Clause.Build(stmt.schema)
 	//filter := tx.Statement.Clause.Build(tx.Statement.schema)
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
 	//fmt.Printf("Update filter:%+v\n", filter)
-	coll := tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
+	coll := tx.client.Database(tx.dbname).Collection(stmt.Table)
 	//reflectModel := reflect.Indirect(reflect.ValueOf(tx.Statement.Model))
-	if tx.Statement.multiple {
+	if stmt.multiple {
 		opts := options.Update()
 		var result *mongo.UpdateResult
-		if result, err = coll.UpdateMany(tx.Statement.Context, filter, data, opts); err == nil {
+		if result, err = coll.UpdateMany(stmt.Context, filter, data, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
 		}
-	} else if len(tx.Statement.projection) > 0 {
+	} else if stmt.Model != nil {
 		opts := options.FindOneAndUpdate()
-		if _, ok := data[MongoSetOnInsert]; ok || tx.Statement.upsert {
+		if _, ok := data[MongoSetOnInsert]; ok || stmt.upsert {
 			opts.SetUpsert(true)
 		}
-		opts.SetReturnDocument(options.After)
-		opts.SetProjection(tx.Statement.projection)
-		//if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
-		//
-		//}
+		if projection := stmt.Selector.Projection(stmt.schema); len(projection) > 0 {
+			opts.SetReturnDocument(options.After)
+			opts.SetProjection(projection)
+		}
 		values := make(map[string]interface{})
-		if updateResult := coll.FindOneAndUpdate(tx.Statement.Context, filter, data, opts); updateResult.Err() == nil {
+		if updateResult := coll.FindOneAndUpdate(stmt.Context, filter, data, opts); updateResult.Err() == nil {
 			tx.RowsAffected = 1
 			err = updateResult.Decode(&values)
 		} else {
@@ -76,11 +76,11 @@ func cmdUpdate(tx *DB) (err error) {
 		}
 	} else {
 		opts := options.Update()
-		if _, ok := data[MongoSetOnInsert]; ok || tx.Statement.upsert {
+		if _, ok := data[MongoSetOnInsert]; ok || stmt.upsert {
 			opts.SetUpsert(true)
 		}
 		var result *mongo.UpdateResult
-		if result, err = coll.UpdateOne(tx.Statement.Context, filter, data, opts); err == nil {
+		if result, err = coll.UpdateOne(stmt.Context, filter, data, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
 		}
 	}
@@ -135,7 +135,7 @@ func cmdQuery(tx *DB) (err error) {
 		if len(order) > 0 {
 			opts.SetSort(order)
 		}
-		if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
+		if projection := tx.Statement.Selector.Projection(nil); len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
 		result := coll.FindOne(tx.Statement.Context, filter, opts)
@@ -165,7 +165,7 @@ func cmdQuery(tx *DB) (err error) {
 		if len(order) > 0 {
 			opts.SetSort(order)
 		}
-		if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
+		if projection := tx.Statement.Selector.Projection(nil); len(projection) > 0 {
 			opts.SetProjection(projection)
 		}
 		var cursor *mongo.Cursor

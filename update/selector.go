@@ -1,5 +1,10 @@
 package update
 
+import (
+	"github.com/hwcer/cosgo/schema"
+	"github.com/hwcer/cosmo/utils"
+)
+
 type SelectorType int8
 
 const (
@@ -60,6 +65,18 @@ func (this *Selector) Omit(columns ...string) bool {
 	return true
 }
 
-func (this *Selector) Projection() map[string]int {
-	return this.projection
+// Projection 获取字段,如果sch!=nil && this.selector == SelectorTypeOmit 全部翻转成 Select模式
+// FindOneAndUpdate 时有用,其他模式传nil
+func (this *Selector) Projection(sch *schema.Schema) map[string]int {
+	if !(sch != nil && this.selector == SelectorTypeOmit) {
+		return this.projection
+	}
+	r := map[string]int{}
+	var ok bool
+	for _, field := range sch.Fields {
+		if _, ok = this.projection[field.DBName]; !ok && field.DBName != utils.MongoPrimaryName {
+			r[field.DBName] = 1
+		}
+	}
+	return r
 }

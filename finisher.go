@@ -73,7 +73,7 @@ func (db *DB) View(paging *values.Paging, conds ...interface{}) (tx *DB) {
 	if len(order) > 0 {
 		opts.SetSort(order)
 	}
-	if projection := tx.Statement.Selector.Projection(); len(projection) > 0 {
+	if projection := tx.Statement.Selector.Projection(nil); len(projection) > 0 {
 		opts.SetProjection(projection)
 	}
 	var cursor *mongo.Cursor

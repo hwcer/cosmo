@@ -3,8 +3,8 @@ package cosmo
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/cosgo/values"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -145,22 +145,9 @@ func (db *DB) WithContext(ctx context.Context) *DB {
 //}
 
 // Errorf add error to db
-func (db *DB) Errorf(msg interface{}, args ...interface{}) error {
-	var err error
-	switch msg.(type) {
-	case string:
-		err = fmt.Errorf(msg.(string), args...)
-	case error:
-		err = msg.(error)
-	default:
-		err = fmt.Errorf("%v", msg)
-	}
-	if db.Error == nil {
-		db.Error = err
-	} else if err != nil {
-		db.Error = fmt.Errorf("%v; %w", db.Error, err)
-	}
-	return db.Error
+func (db *DB) Errorf(format interface{}, args ...interface{}) *DB {
+	db.Error = values.Errorf(0, format, args...)
+	return db
 }
 
 func (db *DB) getInstance() *DB {

@@ -32,9 +32,9 @@ type Statement struct {
 	paging       *Paging
 	schema       *schema.Schema
 	//settings   map[string]interface{}
-	upsert     bool
-	multiple   bool
-	projection map[string]int //findAndUpdate 时需要返回的字段
+	upsert   bool
+	multiple bool
+	//projection map[string]int //findAndUpdate 时需要返回的字段
 	//findAndUpdate bool           //更新
 }
 
@@ -54,28 +54,25 @@ func (stmt *Statement) Parse() (tx *DB) {
 			stmt.ReflectValue = stmt.ReflectValue.Elem()
 		}
 		if !stmt.ReflectValue.IsValid() {
-			_ = tx.Errorf(ErrInvalidValue)
-			return
+			return tx.Errorf(ErrInvalidValue)
 		}
 	}
 	var err error
-	var sch *schema.Schema
+	//var sch *schema.Schema
 	if stmt.Model != nil {
-		sch, err = schema.Parse(stmt.Model)
+		stmt.schema, err = schema.Parse(stmt.Model)
 	} else {
-		if sch, err = schema.Parse(stmt.ReflectValue); err == nil {
-			stmt.schema = sch
-		}
+		stmt.schema, err = schema.Parse(stmt.ReflectValue)
 	}
 	if err != nil {
-		_ = tx.Errorf(err)
-		return
-	}
-	if stmt.Table == "" {
-		stmt.Table = sch.Table
+		return tx.Errorf(err)
 	}
 	if stmt.schema == nil {
-		stmt.schema = sch
+		return tx.Errorf("schema is nil")
+	}
+
+	if stmt.Table == "" {
+		stmt.Table = stmt.schema.Table
 	}
 
 	//if stmt.Clause.Len() == 0 {

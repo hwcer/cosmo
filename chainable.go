@@ -27,28 +27,61 @@ func (db *DB) Table(name string) (tx *DB) {
 	return
 }
 
-// SetUpsert update时如果不存在自动insert
-func (db *DB) SetUpsert() (tx *DB) {
+// Upsert update时如果不存在自动insert
+func (db *DB) Upsert() (tx *DB) {
 	tx = db.getInstance()
 	tx.Statement.upsert = true
 	return
 }
 
-// SetMultiple 强制批量操作
-func (db *DB) SetMultiple() (tx *DB) {
+// Multiple 强制批量操作
+func (db *DB) Multiple() (tx *DB) {
 	tx = db.getInstance()
 	tx.Statement.multiple = true
 	return
 }
 
-// SetProjection FindAndUpdate时要求返回的字段
-func (db *DB) SetProjection(keys ...string) (tx *DB) {
+//
+//// SetProjection FindAndUpdate时要求返回的字段
+//func (db *DB) SetProjection(keys ...string) (tx *DB) {
+//	tx = db.getInstance()
+//	if tx.Statement.projection == nil {
+//		tx.Statement.projection = map[string]int{}
+//	}
+//	for _, k := range keys {
+//		tx.Statement.projection[k] = 1
+//	}
+//	return
+//}
+//
+//// OmitProjection 除忽略掉的字段外全部返回,必须先设置好MODEL
+//func (db *DB) OmitProjection(keys ...string) (tx *DB) {
+//	tx = db.getInstance()
+//	if tx.Statement.Model == nil {
+//		return tx.Errorf(ErrModelValueRequired)
+//	}
+//	omit := map[string]bool{}
+//	for _, k := range keys {
+//		omit[k] = true
+//	}
+//	sch, err := schema.Parse(db.Statement.Model)
+//	if err != nil {
+//		return tx.Errorf(err)
+//	}
+//	var ok bool
+//	for _, field := range sch.Fields {
+//		if _, ok = omit[field.DBName]; !ok {
+//			tx = tx.SetProjection(field.DBName)
+//		}
+//	}
+//	return tx
+//}
+
+// Omit specify fields that you want to ignore when creating, updating and querying
+func (db *DB) Omit(columns ...string) (tx *DB) {
 	tx = db.getInstance()
-	if tx.Statement.projection == nil {
-		tx.Statement.projection = map[string]int{}
-	}
-	for _, k := range keys {
-		tx.Statement.projection[k] = 1
+	if !tx.Statement.Selector.Omit(columns...) {
+		tx.Error = ErrOmitOnSelectsExist
 	}
 	return
 }
@@ -58,15 +91,6 @@ func (db *DB) Select(columns ...string) (tx *DB) {
 	tx = db.getInstance()
 	if !tx.Statement.Selector.Select(columns...) {
 		tx.Error = ErrSelectOnOmitsExist
-	}
-	return
-}
-
-// Omit specify fields that you want to ignore when creating, updating and querying
-func (db *DB) Omit(columns ...string) (tx *DB) {
-	tx = db.getInstance()
-	if !tx.Statement.Selector.Omit(columns...) {
-		tx.Error = ErrOmitOnSelectsExist
 	}
 	return
 }
@@ -132,28 +156,23 @@ func (db *DB) Merge(i interface{}) error {
 	return nil
 }
 
-// SetColumn set column's value
+// SetColumn set column's value to model
 //
 //	stmt.SetColumn("Name", "jinzhu") // Hooks Method
 func (db *DB) SetColumn(data map[string]interface{}) error {
-	stmt := db.Statement
-	var sch *schema.Schema
-	var reflectValue reflect.Value
-
-	if stmt.ReflectValue.Kind() == reflect.Struct {
-		sch = stmt.schema
-		reflectValue = stmt.ReflectValue
-	} else if stmt.Model != nil {
-		sch, _ = schema.Parse(stmt.Model)
-		reflectValue = reflect.ValueOf(stmt.Model)
-	} else {
+	if db.Statement.Model == nil {
 		return nil
 	}
+	sch, err := schema.Parse(db.Statement.Model)
+	if err != nil {
+		return err
+	}
+	reflectValue := reflect.ValueOf(db.Statement.Model)
 	//logger.Debug("reflectModel:%+v", reflectModel.Interface())
 	for k, v := range data {
 		field := sch.LookUpField(k)
 		if field != nil {
-			if err := field.Set(reflectValue, v); err != nil {
+			if err = field.Set(reflectValue, v); err != nil {
 				return err
 			}
 		}

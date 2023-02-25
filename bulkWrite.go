@@ -34,17 +34,18 @@ func (this *BulkWrite) Save() (err error) {
 }
 
 func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
+	stmt := this.tx.Statement
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	upsert, err := update.Build(data, this.tx.Statement.schema, &this.tx.Statement.Selector)
+	value, err := update.Build(data, stmt.schema, &stmt.Selector)
 	if err != nil {
 		_ = this.tx.Errorf(err)
 		return
 	}
 	model := mongo.NewUpdateOneModel()
-	model.SetFilter(query.Build(this.tx.Statement.schema))
-	model.SetUpdate(upsert)
-	if _, ok := upsert[update.UpdateTypeSetOnInsert]; ok {
+	model.SetFilter(query.Build(stmt.schema))
+	model.SetUpdate(value)
+	if _, ok := value[update.UpdateTypeSetOnInsert]; ok || stmt.upsert {
 		model.SetUpsert(true)
 	}
 	this.models = append(this.models, model)
