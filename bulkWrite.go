@@ -22,6 +22,11 @@ func (this *BulkWrite) Save() (err error) {
 	if len(this.models) == 0 {
 		return nil
 	}
+	if len(this.opts) == 0 {
+		ordered := false
+		this.opts = append(this.opts, &options.BulkWriteOptions{Ordered: &ordered})
+	}
+
 	tx := this.tx.callbacks.Call(this.tx, func(db *DB) error {
 		coll := db.client.Database(db.dbname).Collection(db.Statement.Table)
 		if this.result, err = coll.BulkWrite(context.Background(), this.models, this.opts...); err == nil {
