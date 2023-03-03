@@ -92,13 +92,15 @@ func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data
 	opts.SetProjection(projection)
 	opts.SetReturnDocument(options.After)
 	values := make(map[string]interface{})
-	if updateResult := coll.FindOneAndUpdate(tx.Statement.Context, filter, data, opts); updateResult.Err() == nil {
-		tx.RowsAffected = 1
-		err = updateResult.Decode(&values)
+	updateResult := coll.FindOneAndUpdate(tx.Statement.Context, filter, data, opts)
+	err = updateResult.Err()
+	if err != mongo.ErrNoDocuments {
+		return
 	} else {
-		err = updateResult.Err()
+		tx.RowsAffected = 1
 	}
-	if err == nil {
+	err = updateResult.Decode(&values)
+	if len(values) > 0 {
 		_ = tx.SetColumn(values)
 	}
 	return

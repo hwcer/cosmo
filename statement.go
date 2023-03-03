@@ -32,7 +32,7 @@ type Statement struct {
 	paging       *Paging
 	schema       *schema.Schema
 	//settings   map[string]interface{}
-	upsert   bool
+	upsert   bool //todo
 	multiple bool
 	//projection map[string]int //findAndUpdate 时需要返回的字段
 	//findAndUpdate bool           //更新
