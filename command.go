@@ -81,6 +81,7 @@ func UpdateOne(tx *DB, coll *mongo.Collection, filter clause.Filter, data update
 	if result, err = coll.UpdateOne(tx.Statement.Context, filter, data, opts); err == nil {
 		tx.RowsAffected = result.MatchedCount
 	}
+
 	return
 }
 
@@ -93,12 +94,13 @@ func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data
 	opts.SetReturnDocument(options.After)
 	values := make(map[string]interface{})
 	updateResult := coll.FindOneAndUpdate(tx.Statement.Context, filter, data, opts)
-	err = updateResult.Err()
-	if err != mongo.ErrNoDocuments {
-		return
-	} else {
-		tx.RowsAffected = 1
+	if err = updateResult.Err(); err != nil {
+		if err == mongo.ErrNoDocuments {
+			err = nil
+		}
+		return err
 	}
+	tx.RowsAffected = 1
 	err = updateResult.Decode(&values)
 	if len(values) > 0 {
 		_ = tx.SetColumn(values)
