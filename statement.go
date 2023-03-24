@@ -94,7 +94,7 @@ func (stmt *Statement) Parse() (tx *DB) {
 	//		reflectValue = stmt.ReflectValue
 	//	}
 	//	if reflectValue.IsValid() && !reflectValue.IsZero() {
-	//		if v := tx.Statement.schema.GetValue(reflectValue, clause.MongoPrimaryName); v != nil {
+	//		if v := tx.statement.schema.GetValue(reflectValue, clause.MongoPrimaryName); v != nil {
 	//			tx.Where(v)
 	//		}
 	//	}
@@ -128,7 +128,7 @@ func (stmt *Statement) Schema() *schema.Schema {
 
 // Projection 不能同时使用Select和Omit 优先Select生效
 // 可以使用model属性名或者数据库字段名
-//func (stmt *Statement) Projection() map[string]int {
+//func (stmt *statement) Projection() map[string]int {
 //	projection := make(map[string]int)
 //	for _, k := range stmt.Selects {
 //		projection[stmt.DBName(k)] = 1

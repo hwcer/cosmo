@@ -42,13 +42,13 @@ func cmdUpdate(tx *DB) (err error) {
 	}
 	//fmt.Printf("update:%+v\n", update)
 	filter := stmt.Clause.Build(stmt.schema)
-	//filter := tx.Statement.Clause.Build(tx.Statement.schema)
+	//filter := tx.statement.Clause.Build(tx.statement.schema)
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
 	//fmt.Printf("Update filter:%+v\n", filter)
 	coll := tx.client.Database(tx.dbname).Collection(stmt.Table)
-	//reflectModel := reflect.Indirect(reflect.ValueOf(tx.Statement.Model))
+	//reflectModel := reflect.Indirect(reflect.ValueOf(tx.statement.Model))
 	if stmt.multiple {
 		opts := options.Update()
 		var result *mongo.UpdateResult

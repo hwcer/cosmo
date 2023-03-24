@@ -131,16 +131,16 @@ func (db *DB) WithContext(ctx context.Context) *DB {
 //func (db *DB) Set(key string, value interface{}) *DB {
 //	tx := db.getInstance()
 //	setting := map[string]interface{}{}
-//	for k, v := range tx.Statement.settings {
+//	for k, v := range tx.statement.settings {
 //		setting[k] = v
 //	}
-//	tx.Statement.settings = setting
+//	tx.statement.settings = setting
 //	return tx
 //}
 //
 //// Get get value with key from current db instance's context
 //func (db *DB) Get(key string) (val interface{}, ok bool) {
-//	val, ok = db.Statement.settings[key]
+//	val, ok = db.statement.settings[key]
 //	return
 //}
 

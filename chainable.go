@@ -45,11 +45,11 @@ func (db *DB) Multiple() (tx *DB) {
 //// SetProjection FindAndUpdate时要求返回的字段
 //func (db *DB) SetProjection(keys ...string) (tx *DB) {
 //	tx = db.getInstance()
-//	if tx.Statement.projection == nil {
-//		tx.Statement.projection = map[string]int{}
+//	if tx.statement.projection == nil {
+//		tx.statement.projection = map[string]int{}
 //	}
 //	for _, k := range keys {
-//		tx.Statement.projection[k] = 1
+//		tx.statement.projection[k] = 1
 //	}
 //	return
 //}
@@ -57,14 +57,14 @@ func (db *DB) Multiple() (tx *DB) {
 //// OmitProjection 除忽略掉的字段外全部返回,必须先设置好MODEL
 //func (db *DB) OmitProjection(keys ...string) (tx *DB) {
 //	tx = db.getInstance()
-//	if tx.Statement.Model == nil {
+//	if tx.statement.Model == nil {
 //		return tx.Errorf(ErrModelValueRequired)
 //	}
 //	omit := map[string]bool{}
 //	for _, k := range keys {
 //		omit[k] = true
 //	}
-//	sch, err := schema.Parse(db.Statement.Model)
+//	sch, err := schema.Parse(db.statement.Model)
 //	if err != nil {
 //		return tx.Errorf(err)
 //	}
@@ -98,7 +98,7 @@ func (db *DB) Select(columns ...string) (tx *DB) {
 // FindAndUpdate 查询并更新,需要配合Select使用
 //func (db *DB) FindAndUpdate() (tx *DB) {
 //	tx = db.getInstance()
-//	tx.Statement.findAndUpdate = true
+//	tx.statement.findAndUpdate = true
 //	return
 //}
 
