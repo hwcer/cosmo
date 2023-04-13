@@ -3,7 +3,7 @@ package cosmo
 import (
 	"context"
 	"errors"
-	"github.com/hwcer/cosgo/logger"
+
 	"github.com/hwcer/cosgo/values"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -27,10 +27,10 @@ func New(configs ...*Config) (db *DB) {
 	} else {
 		config = &Config{}
 	}
-
-	if config.Logger == nil {
-		config.Logger = logger.GetDefaultLogger()
-	}
+	//
+	//if config.Logger == nil {
+	//	config.Logger = logger.Default()
+	//}
 
 	if config.Plugins == nil {
 		config.Plugins = map[string]Plugin{}
@@ -90,9 +90,9 @@ func (db *DB) Session(session *Session) *DB {
 		tx.Statement.Context = session.Context
 	}
 
-	if session.Logger != nil {
-		tx.Config.Logger = config.Logger
-	}
+	//if session.Logger != nil {
+	//	tx.Config.Logger = config.Logger
+	//}
 
 	return tx
 }

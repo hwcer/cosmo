@@ -2,7 +2,6 @@ package cosmo
 
 import (
 	"context"
-	"github.com/hwcer/cosgo/logger"
 	"time"
 )
 
@@ -19,7 +18,7 @@ type Session struct {
 	//FullSaveAssociations     bool
 	//QueryFields              bool
 	Context context.Context
-	Logger  logger.Interface
+	//Logger  logger.Interface
 	NowTime func() time.Time
 	//CreateBatchSize          int
 }

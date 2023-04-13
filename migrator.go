@@ -3,7 +3,6 @@ package cosmo
 import (
 	"context"
 	"fmt"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/schema"
 	"go.mongodb.org/mongo-driver/mongo"
 	"strings"
@@ -35,7 +34,6 @@ func (db *DB) indexes(model interface{}, index *schema.Index) (err error) {
 	indexView := coll.Indexes()
 	_, err = indexView.CreateOne(context.Background(), index.Build())
 	if cv, ok := err.(mongo.CommandError); ok && cv.Code == 85 || strings.HasPrefix(cv.Message, "Index already exists with a different name") {
-		logger.Debug(cv.Message)
 		err = nil
 	}
 	return

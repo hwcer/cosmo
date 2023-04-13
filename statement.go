@@ -2,11 +2,12 @@ package cosmo
 
 import (
 	"context"
+	"reflect"
+
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/bson"
-	"reflect"
 )
 
 func NewStatement(db *DB) *Statement {
@@ -125,19 +126,3 @@ func (stmt *Statement) Order() (order bson.D) {
 func (stmt *Statement) Schema() *schema.Schema {
 	return stmt.schema
 }
-
-// Projection 不能同时使用Select和Omit 优先Select生效
-// 可以使用model属性名或者数据库字段名
-//func (stmt *statement) Projection() map[string]int {
-//	projection := make(map[string]int)
-//	for _, k := range stmt.Selects {
-//		projection[stmt.DBName(k)] = 1
-//	}
-//	if len(projection) > 0 {
-//		return projection
-//	}
-//	for _, k := range stmt.Omits {
-//		projection[stmt.DBName(k)] = 0
-//	}
-//	return projection
-//}

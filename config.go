@@ -1,14 +1,13 @@
 package cosmo
 
 import (
-	"github.com/hwcer/cosgo/logger"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Config GORM config
 type Config struct {
-	models    []interface{}
-	Logger    logger.Interface
+	models []interface{}
+	//Logger    logger.Interface
 	Plugins   map[string]Plugin
 	dbname    string
 	client    *mongo.Client
