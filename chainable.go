@@ -1,7 +1,9 @@
 package cosmo
 
 import (
+	"fmt"
 	"github.com/hwcer/cosgo/schema"
+	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
 	"reflect"
 )
@@ -159,7 +161,12 @@ func (db *DB) Merge(i interface{}) error {
 // SetColumn set column's value to model
 //
 //	stmt.SetColumn("Name", "jinzhu") // Hooks Method
-func (db *DB) SetColumn(data map[string]interface{}) error {
+func (db *DB) SetColumn(data map[string]interface{}) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("%v", e)
+		}
+	}()
 	if db.Statement.Model == nil {
 		return nil
 	}
@@ -171,7 +178,7 @@ func (db *DB) SetColumn(data map[string]interface{}) error {
 	//logger.Debug("reflectModel:%+v", reflectModel.Interface())
 	for k, v := range data {
 		field := sch.LookUpField(k)
-		if field != nil {
+		if field != nil && field.DBName != clause.MongoPrimaryName {
 			if err = field.Set(reflectValue, v); err != nil {
 				return err
 			}
