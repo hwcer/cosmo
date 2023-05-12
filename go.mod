@@ -3,13 +3,13 @@ module github.com/hwcer/cosmo
 go 1.18
 
 require (
-	github.com/hwcer/cosgo v0.0.2
+	github.com/hwcer/cosgo v0.0.3
+	github.com/hwcer/logger v0.0.3 // indirect
 	go.mongodb.org/mongo-driver v1.11.4
 )
 
 require (
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/hwcer/logger v0.0.2 // indirect
 	github.com/klauspost/compress v1.16.4 // indirect
 	github.com/montanaflynn/stats v0.7.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
