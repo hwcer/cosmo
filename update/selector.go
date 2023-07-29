@@ -2,7 +2,6 @@ package update
 
 import (
 	"github.com/hwcer/cosgo/schema"
-	"github.com/hwcer/cosmo/utils"
 )
 
 type SelectorType int8
@@ -15,7 +14,7 @@ const (
 
 type Selector struct {
 	selector   SelectorType
-	projection map[string]int
+	projection map[string]bool
 }
 
 // Is 判断key是否被选中
@@ -42,10 +41,10 @@ func (this *Selector) Select(columns ...string) bool {
 	}
 	if this.selector == SelectorTypeNone {
 		this.selector = SelectorTypeSelect
-		this.projection = map[string]int{}
+		this.projection = map[string]bool{}
 	}
 	for _, k := range columns {
-		this.projection[k] = 1
+		this.projection[k] = true
 	}
 	return true
 }
@@ -57,26 +56,26 @@ func (this *Selector) Omit(columns ...string) bool {
 	}
 	if this.selector == SelectorTypeNone {
 		this.selector = SelectorTypeOmit
-		this.projection = map[string]int{}
+		this.projection = map[string]bool{}
 	}
 	for _, k := range columns {
-		this.projection[k] = 0
+		this.projection[k] = false
 	}
 	return true
 }
 
 // Projection 获取字段,如果sch!=nil && this.selector == SelectorTypeOmit 全部翻转成 Select模式
 // FindOneAndUpdate 时有用,其他模式传nil
-func (this *Selector) Projection(sch *schema.Schema) map[string]int {
-	if !(sch != nil && this.selector == SelectorTypeOmit) {
-		return this.projection
+func (this *Selector) Projection(sch *schema.Schema) map[string]bool {
+	if this.projection == nil {
+		return nil
 	}
-	r := map[string]int{}
-	var ok bool
-	for _, field := range sch.Fields {
-		if _, ok = this.projection[field.DBName]; !ok && field.DBName != utils.MongoPrimaryName {
-			r[field.DBName] = 1
+	r := map[string]bool{}
+	for k, v := range this.projection {
+		if field := sch.LookUpField(k); field != nil {
+			r[field.DBName] = v
 		}
 	}
+
 	return r
 }

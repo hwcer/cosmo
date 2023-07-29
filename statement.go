@@ -23,27 +23,18 @@ func NewStatement(db *DB) *Statement {
 // Statement statement
 type Statement struct {
 	*DB
-	Dest         interface{}
-	Table        string
-	Model        interface{}
-	Selector     update.Selector
-	ReflectValue reflect.Value
-	Context      context.Context
-	Clause       *clause.Query
-	paging       *Paging
-	schema       *schema.Schema
-	//settings   map[string]interface{}
-	upsert   bool //todo
-	multiple bool
-	//projection map[string]int //findAndUpdate 时需要返回的字段
-	//findAndUpdate bool           //更新
-}
-
-func (stmt *Statement) HasValidModel() bool {
-	if stmt.Model == nil {
-		return false
-	}
-	return !reflect.ValueOf(stmt.Model).IsNil()
+	model                any
+	value                any
+	table                string
+	selector             update.Selector
+	reflectValue         reflect.Value
+	Context              context.Context
+	Clause               *clause.Query
+	paging               *Paging
+	schema               *schema.Schema
+	upsert               bool //文档不存在时自动插入新文档
+	multiple             bool //强制批量更新
+	updateAndModifyModel bool //更新数据库成功时修改将最终结果写入到model
 }
 
 // Parse Parse model to schema
@@ -52,54 +43,36 @@ func (stmt *Statement) Parse() (tx *DB) {
 	if tx.Error != nil {
 		return
 	}
-	// assign Dest values
-	if stmt.Dest != nil {
-		stmt.ReflectValue = reflect.ValueOf(stmt.Dest)
-		for stmt.ReflectValue.Kind() == reflect.Ptr {
-			if stmt.ReflectValue.IsNil() && stmt.ReflectValue.CanAddr() {
-				stmt.ReflectValue.Set(reflect.New(stmt.ReflectValue.Type().Elem()))
+	// assign value values
+	if stmt.value != nil {
+		stmt.reflectValue = reflect.ValueOf(stmt.value)
+		for stmt.reflectValue.Kind() == reflect.Ptr {
+			if stmt.reflectValue.IsNil() && stmt.reflectValue.CanAddr() {
+				stmt.reflectValue.Set(reflect.New(stmt.reflectValue.Type().Elem()))
 			}
-			stmt.ReflectValue = stmt.ReflectValue.Elem()
+			stmt.reflectValue = stmt.reflectValue.Elem()
 		}
-		if !stmt.ReflectValue.IsValid() {
+		if !stmt.reflectValue.IsValid() {
 			return tx.Errorf(ErrInvalidValue)
 		}
 	}
-	var err error
+
 	//var sch *schema.Schema
-	if stmt.Model != nil {
-		stmt.schema, err = schema.Parse(stmt.Model)
+	if stmt.model != nil {
+		stmt.schema, tx.Error = schema.Parse(stmt.model)
 	} else {
-		stmt.schema, err = schema.Parse(stmt.ReflectValue)
+		stmt.schema, tx.Error = schema.Parse(stmt.reflectValue)
 	}
-	if err != nil {
-		return tx.Errorf(err)
+	if tx.Error != nil {
+		return
 	}
 	if stmt.schema == nil {
 		return tx.Errorf("schema is nil")
 	}
-
-	if stmt.Table == "" {
-		stmt.Table = stmt.schema.Table
+	if stmt.table == "" {
+		stmt.table = stmt.schema.Table
 	}
 
-	//if stmt.Clause.Len() == 0 {
-	//	_ = tx.Errorf(ErrMissingWhereClause)
-	//}
-	//空查询，匹配Dest或者Model中的主键
-	//if stmt.Clause.Len() == 0 {
-	//	var reflectValue reflect.Value
-	//	if stmt.Model != nil {
-	//		reflectValue = reflect.Indirect(reflect.ValueOf(stmt.Model))
-	//	} else if stmt.ReflectValue.Kind() == reflect.Struct {
-	//		reflectValue = stmt.ReflectValue
-	//	}
-	//	if reflectValue.IsValid() && !reflectValue.IsZero() {
-	//		if v := tx.statement.schema.GetValue(reflectValue, clause.MongoPrimaryName); v != nil {
-	//			tx.Where(v)
-	//		}
-	//	}
-	//}
 	return
 }
 

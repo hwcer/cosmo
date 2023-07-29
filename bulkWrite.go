@@ -16,8 +16,8 @@ type BulkWrite struct {
 }
 
 func (this *BulkWrite) Save() (err error) {
-	if this.tx.Statement.Error != nil {
-		return this.tx.Statement.Error
+	if this.tx.statement.Error != nil {
+		return this.tx.statement.Error
 	}
 	if len(this.models) == 0 {
 		return nil
@@ -28,7 +28,7 @@ func (this *BulkWrite) Save() (err error) {
 	}
 
 	tx := this.tx.callbacks.Call(this.tx, func(db *DB) error {
-		coll := db.client.Database(db.dbname).Collection(db.Statement.Table)
+		coll := db.client.Database(db.dbname).Collection(db.statement.table)
 		if this.result, err = coll.BulkWrite(context.Background(), this.models, this.opts...); err == nil {
 			this.models = nil
 		}
@@ -39,10 +39,10 @@ func (this *BulkWrite) Save() (err error) {
 }
 
 func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
-	stmt := this.tx.Statement
+	stmt := this.tx.statement
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	value, err := update.Build(data, stmt.schema, &stmt.Selector)
+	value, err := update.Build(data, stmt.schema, &stmt.selector)
 	if err != nil {
 		_ = this.tx.Errorf(err)
 		return
@@ -67,7 +67,7 @@ func (this *BulkWrite) Insert(documents ...interface{}) {
 func (this *BulkWrite) Delete(where ...interface{}) {
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	filter := query.Build(this.tx.Statement.schema)
+	filter := query.Build(this.tx.statement.schema)
 	multiple := clause.Multiple(filter)
 
 	if multiple {

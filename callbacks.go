@@ -15,11 +15,11 @@ type callbacks struct {
 }
 
 type processor struct {
-	handle ExecuteHandle
+	handle executeHandle
 }
 
-//Call 自定义调用
-func (cs *callbacks) Call(db *DB, handle ExecuteHandle) *DB {
+// Call 自定义调用
+func (cs *callbacks) Call(db *DB, handle executeHandle) *DB {
 	p := &processor{handle: handle}
 	return p.Execute(db)
 }
@@ -40,24 +40,25 @@ func (cs *callbacks) Delete() *processor {
 	return cs.processors["delete"]
 }
 
-//Execute 执行操作
-//  handle func(tx *DB,query BuildUpdate.M) error
+// Execute 执行操作
+//
+//	handle func(tx *DB,query BuildUpdate.M) error
 func (p *processor) Execute(db *DB) (tx *DB) {
-	tx = db.Statement.Parse()
+	tx = db.statement.Parse()
 	if tx.Error != nil {
 		return
 	}
 
-	stmt := tx.Statement
-	if stmt.Table == "" {
-		tx.Errorf("Table not set, please set it like: db.Model(&user) or db.Table(\"users\") %+v")
+	stmt := tx.statement
+	if stmt.table == "" {
+		tx.Errorf("table not set, please set it like: db.model(&user) or db.table(\"users\") %+v")
 	}
-	//dest || model 类型为Struct并且主键不为空时，设置为查询条件
+	//value || model 类型为Struct并且主键不为空时，设置为查询条件
 	//var reflectModel reflect.Value
-	//if stmt.Model != nil {
-	//	reflectModel = reflect.Indirect(reflect.ValueOf(stmt.Model))
-	//} else if stmt.ReflectValue.Kind() == reflect.Struct {
-	//	reflectModel = stmt.ReflectValue
+	//if stmt.model != nil {
+	//	reflectModel = reflect.Indirect(reflect.ValueOf(stmt.model))
+	//} else if stmt.reflectValue.Kind() == reflect.Struct {
+	//	reflectModel = stmt.reflectValue
 	//}
 	//if reflectModel.IsValid() && !reflectModel.IsZero() {
 	//	field := stmt.schema.LookUpField(clause.MongoPrimaryName)
@@ -72,11 +73,11 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 	if p.handle == nil || tx.Error != nil {
 		return
 	}
-	defer tx.reset()
+	//defer tx.reset()
 	if err := p.handle(tx); err != nil {
 		tx.Errorf(err)
 		return
 	}
-	//fmt.Printf("Execute:%v,%+v\n", stmt.ReflectValue.Kind(), stmt.ReflectValue.Interface())
+	//fmt.Printf("Execute:%v,%+v\n", stmt.reflectValue.Kind(), stmt.reflectValue.Interface())
 	return
 }

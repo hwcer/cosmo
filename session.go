@@ -2,7 +2,6 @@ package cosmo
 
 import (
 	"context"
-	"time"
 )
 
 // Session session config when create session with Session() method
@@ -10,8 +9,8 @@ type Session struct {
 	DBName string
 	//DryRun                   bool
 	//PrepareStmt              bool
-	NewDB     bool
-	SkipHooks bool
+	//NewDB     bool
+	//SkipHooks bool
 	//SkipDefaultTransaction   bool
 	//DisableNestedTransaction bool
 	//AllowGlobalUpdate        bool
@@ -19,6 +18,6 @@ type Session struct {
 	//QueryFields              bool
 	Context context.Context
 	//Logger  logger.Interface
-	NowTime func() time.Time
+	//NowTime func() time.Time
 	//CreateBatchSize          int
 }

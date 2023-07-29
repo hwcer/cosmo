@@ -13,8 +13,8 @@ import (
 type DB struct {
 	*Config
 	clone        bool //是否克隆体
+	statement    *Statement
 	Error        error
-	Statement    *Statement
 	RowsAffected int64 //操作影响的条数
 }
 
@@ -27,19 +27,13 @@ func New(configs ...*Config) (db *DB) {
 	} else {
 		config = &Config{}
 	}
-	//
-	//if config.Logger == nil {
-	//	config.Logger = logger.Default()
+
+	//if config.Plugins == nil {
+	//	config.Plugins = map[string]Plugin{}
 	//}
-
-	if config.Plugins == nil {
-		config.Plugins = map[string]Plugin{}
-	}
-
 	db = &DB{Config: config}
 	db.callbacks = initializeCallbacks()
-	db.Statement = NewStatement(db)
-
+	db.statement = NewStatement(db)
 	return
 }
 
@@ -80,14 +74,14 @@ func (db *DB) Session(session *Session) *DB {
 		}
 	)
 
-	tx.Statement = NewStatement(tx)
+	tx.statement = NewStatement(tx)
 
 	if session.DBName != "" {
 		tx.Config.dbname = session.DBName
 	}
 
 	if session.Context != nil {
-		tx.Statement.Context = session.Context
+		tx.statement.Context = session.Context
 	}
 
 	//if session.Logger != nil {
@@ -101,7 +95,7 @@ func (db *DB) Session(session *Session) *DB {
 func (db *DB) Database(dbname string) *DB {
 	return db.Session(&Session{DBName: dbname})
 }
-func (db *DB) Collection(model interface{}) (tx *DB, coll *mongo.Collection) {
+func (db *DB) Collection(model any) (tx *DB, coll *mongo.Collection) {
 	switch model.(type) {
 	case string:
 		tx = db.Table(model.(string))
@@ -109,7 +103,7 @@ func (db *DB) Collection(model interface{}) (tx *DB, coll *mongo.Collection) {
 		tx = db.Model(model)
 	}
 	tx = tx.callbacks.Call(tx, func(tx *DB) error {
-		coll = tx.client.Database(tx.dbname).Collection(tx.Statement.Table)
+		coll = tx.client.Database(tx.dbname).Collection(tx.statement.table)
 		return nil
 	})
 	return
@@ -118,7 +112,7 @@ func (db *DB) Collection(model interface{}) (tx *DB, coll *mongo.Collection) {
 // BulkWrite 批量写入
 func (db *DB) BulkWrite(model interface{}) *BulkWrite {
 	tx := db.Model(model)
-	tx = tx.Statement.Parse()
+	tx = tx.statement.Parse()
 	return &BulkWrite{tx: tx}
 }
 
@@ -126,23 +120,6 @@ func (db *DB) BulkWrite(model interface{}) *BulkWrite {
 func (db *DB) WithContext(ctx context.Context) *DB {
 	return db.Session(&Session{Context: ctx})
 }
-
-// Set store value with key into current db instance's context
-//func (db *DB) Set(key string, value interface{}) *DB {
-//	tx := db.getInstance()
-//	setting := map[string]interface{}{}
-//	for k, v := range tx.statement.settings {
-//		setting[k] = v
-//	}
-//	tx.statement.settings = setting
-//	return tx
-//}
-//
-//// Get get value with key from current db instance's context
-//func (db *DB) Get(key string) (val interface{}, ok bool) {
-//	val, ok = db.statement.settings[key]
-//	return
-//}
 
 // Errorf add error to db
 func (db *DB) Errorf(format interface{}, args ...interface{}) *DB {
@@ -155,21 +132,21 @@ func (db *DB) getInstance() *DB {
 		return db
 	}
 	tx := &DB{Config: db.Config, clone: true}
-	tx.Statement = NewStatement(tx)
+	tx.statement = NewStatement(tx)
 	return tx
 }
 
-func (db *DB) Use(plugin Plugin) error {
-	name := plugin.Name()
-	if _, ok := db.Plugins[name]; ok {
-		return ErrRegistered
-	}
-	if err := plugin.Initialize(db); err != nil {
-		return err
-	}
-	db.Plugins[name] = plugin
-	return nil
-}
+//func (db *DB) Use(plugin Plugin) error {
+//	name := plugin.Name()
+//	if _, ok := db.Plugins[name]; ok {
+//		return ErrRegistered
+//	}
+//	if err := plugin.Initialize(db); err != nil {
+//		return err
+//	}
+//	db.Plugins[name] = plugin
+//	return nil
+//}
 
 func (db *DB) ObjectID() primitive.ObjectID {
 	return primitive.NewObjectID()
