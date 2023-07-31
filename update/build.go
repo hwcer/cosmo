@@ -8,7 +8,10 @@ import (
 	"github.com/hwcer/cosmo/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
+	"strings"
 )
+
+const MongodbFieldSplit = "."
 
 type SetOnInsert interface {
 	SetOnInsert() (map[string]interface{}, error)
@@ -56,7 +59,9 @@ func parseMap(dest interface{}, sch *schema.Schema, filter *Selector) (update Up
 	}
 	update = make(Update)
 	for k, v := range destMap {
-		if field := sch.LookUpField(k); field != nil {
+		if strings.Contains(k, MongodbFieldSplit) {
+			update.Set(k, v)
+		} else if field := sch.LookUpField(k); field != nil {
 			name := field.DBName
 			if filter.Is(name, false) {
 				update.Set(name, v)
