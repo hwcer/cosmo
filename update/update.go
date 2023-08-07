@@ -2,6 +2,7 @@ package update
 
 import (
 	"encoding/json"
+	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"strings"
@@ -12,6 +13,8 @@ const (
 	UpdateTypeInc         = "$inc"
 	UpdateTypeSetOnInsert = "$setOnInsert"
 )
+
+var projectionField = []string{UpdateTypeSet, UpdateTypeInc}
 
 func New() Update {
 	return make(Update)
@@ -96,8 +99,6 @@ func (u Update) String() string {
 	return string(b)
 }
 
-var projectionField = []string{UpdateTypeSet, UpdateTypeInc}
-
 func (u Update) Projection() bson.M {
 	p := make(bson.M)
 	for _, m := range projectionField {
@@ -106,4 +107,22 @@ func (u Update) Projection() bson.M {
 		}
 	}
 	return p
+}
+
+// Transform 转换成数据库字段名
+func (u Update) Transform(sch *schema.Schema) Update {
+	r := Update{}
+	for _, t := range []string{UpdateTypeSet, UpdateTypeInc, UpdateTypeSetOnInsert} {
+		d := bson.M{}
+		for k, v := range u {
+			if strings.Contains(k, MongodbFieldSplit) {
+				d[k] = v
+			} else if field := sch.LookUpField(k); field != nil {
+				d[field.DBName] = v
+			}
+		}
+		r[t] = d
+	}
+
+	return r
 }

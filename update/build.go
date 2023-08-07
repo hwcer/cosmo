@@ -6,9 +6,7 @@ import (
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/utils"
-	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
-	"strings"
 )
 
 const MongodbFieldSplit = "."
@@ -27,7 +25,7 @@ func Build(i interface{}, sch *schema.Schema, filter *Selector) (update Update, 
 	reflectValue := reflect.Indirect(utils.ValueOf(i))
 	switch reflectValue.Kind() {
 	case reflect.Map:
-		update, err = parseMap(i, sch, filter)
+		update, err = parseMap(i, reflectValue, sch, filter)
 	case reflect.Struct:
 		update, err = parseStruct(i, reflectValue, sch, filter)
 	default:
@@ -37,55 +35,47 @@ func Build(i interface{}, sch *schema.Schema, filter *Selector) (update Update, 
 		return
 	}
 
+	if v, ok := update[UpdateTypeSetOnInsert]; ok {
+		if r := filterSetOnInsert(v, update); len(r) > 0 {
+			update[UpdateTypeSetOnInsert] = r
+		} else {
+			delete(update, UpdateTypeSetOnInsert)
+		}
+	}
+
 	return
 }
 
 // parseMap 使用Map修改数据 map,bson.M 被视为使用 $set 操作
 // 高级提交需要使用 Update
-func parseMap(dest interface{}, sch *schema.Schema, filter *Selector) (update Update, err error) {
-	var destMap bson.M
-	switch v := dest.(type) {
-	case map[string]interface{}:
-		destMap = v
-	case bson.M:
-		destMap = v
+func parseMap(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector) (update Update, err error) {
+	switch v := desc.(type) {
 	case Update:
-		return dest.(Update), nil
+		update = desc.(Update)
 	default:
-		err = errors.New("Update方法参数仅支持 struct 和 map[string]interface{}")
+		update = Update{}
+		err = update.Convert(UpdateTypeSet, v)
 	}
 	if err != nil {
 		return
 	}
-	update = make(Update)
-	for k, v := range destMap {
-		if strings.Contains(k, MongodbFieldSplit) {
-			update.Set(k, v)
-		} else if field := sch.LookUpField(k); field != nil {
-			name := field.DBName
-			if filter.Is(name, false) {
-				update.Set(name, v)
-			}
-		}
-	}
-	if v, ok := update[UpdateTypeSetOnInsert]; ok {
-		update[UpdateTypeSetOnInsert] = filterSetOnInsert(v, update)
-	}
-	return
+	return update.Transform(sch), nil
 }
 
-func parseStruct(dest interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector) (update Update, err error) {
+func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector) (update Update, err error) {
 	update = make(Update)
 	for _, field := range sch.Fields {
 		v := reflectValue.FieldByIndex(field.StructField.Index)
-		if v.IsValid() && field.DBName != clause.MongoPrimaryName && filter.Is(field.DBName, v.IsZero()) {
-			update.Set(field.DBName, v.Interface())
+		if v.IsValid() && field.DBName != clause.MongoPrimaryName {
+			if has := filter.Has(field.DBName); has > 0 || (has == 0 && !v.IsZero()) {
+				update.Set(field.DBName, v.Interface())
+			}
 		}
 	}
-	if s, ok := dest.(SetOnInsert); ok {
+	if s, ok := desc.(SetOnInsert); ok {
 		var v map[string]interface{}
-		if v, err = s.SetOnInsert(); err == nil && v != nil {
-			update[UpdateTypeSetOnInsert] = filterSetOnInsert(v, update)
+		if v, err = s.SetOnInsert(); err == nil && len(v) > 0 {
+			update[UpdateTypeSetOnInsert] = v
 		}
 	}
 	return

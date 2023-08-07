@@ -17,18 +17,17 @@ type Selector struct {
 	projection map[string]bool
 }
 
-// Is 判断key是否被选中
-func (this *Selector) Is(key string, isZero bool) bool {
-	if len(this.projection) == 0 {
-		return !isZero
-	}
-	_, ok := this.projection[key]
-	if this.selector == SelectorTypeSelect {
-		return ok
+// Has -1 忽略，0-默认，1-选择
+func (this *Selector) Has(key string) int {
+	if r, ok := this.projection[key]; !ok {
+		return 0
+	} else if r {
+		return 1
 	} else {
-		return !ok
+		return -1
 	}
 }
+
 func (this *Selector) Release() {
 	this.selector = SelectorTypeNone
 	this.projection = nil
