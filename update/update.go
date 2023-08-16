@@ -113,15 +113,17 @@ func (u Update) Projection() bson.M {
 func (u Update) Transform(sch *schema.Schema) Update {
 	r := Update{}
 	for _, t := range []string{UpdateTypeSet, UpdateTypeInc, UpdateTypeSetOnInsert} {
-		d := bson.M{}
-		for k, v := range u {
-			if strings.Contains(k, MongodbFieldSplit) {
-				d[k] = v
-			} else if field := sch.LookUpField(k); field != nil {
-				d[field.DBName] = v
+		if m, ok := u[t]; ok {
+			d := bson.M{}
+			for k, v := range m {
+				if strings.Contains(k, MongodbFieldSplit) {
+					d[k] = v
+				} else if field := sch.LookUpField(k); field != nil {
+					d[field.DBName] = v
+				}
 			}
+			r[t] = d
 		}
-		r[t] = d
 	}
 
 	return r
