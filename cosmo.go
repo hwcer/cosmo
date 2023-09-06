@@ -3,8 +3,8 @@ package cosmo
 import (
 	"context"
 	"errors"
+	"fmt"
 
-	"github.com/hwcer/cosgo/values"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -123,7 +123,12 @@ func (db *DB) WithContext(ctx context.Context) *DB {
 
 // Errorf add error to db
 func (db *DB) Errorf(format interface{}, args ...interface{}) *DB {
-	db.Error = values.Errorf(0, format, args...)
+	switch v := format.(type) {
+	case string:
+		db.Error = fmt.Errorf(v, args...)
+	default:
+		db.Error = fmt.Errorf("%v", format)
+	}
 	return db
 }
 
