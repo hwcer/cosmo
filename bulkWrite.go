@@ -42,7 +42,7 @@ func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
 	stmt := this.tx.statement
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	value, err := update.Build(data, stmt.schema, &stmt.selector)
+	value, upsert, err := update.Build(data, stmt.schema, &stmt.selector)
 	if err != nil {
 		_ = this.tx.Errorf(err)
 		return
@@ -50,7 +50,7 @@ func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
 	model := mongo.NewUpdateOneModel()
 	model.SetFilter(query.Build(stmt.schema))
 	model.SetUpdate(value)
-	if _, ok := value[update.UpdateTypeSetOnInsert]; ok || stmt.upsert {
+	if upsert || stmt.upsert {
 		model.SetUpsert(true)
 	}
 	this.models = append(this.models, model)

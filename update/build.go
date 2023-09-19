@@ -6,6 +6,7 @@ import (
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/utils"
+	"github.com/hwcer/logger"
 	"reflect"
 )
 
@@ -18,9 +19,10 @@ type SetOnInsert interface {
 // Build 使用当前模型，将map bson.m Struct 转换成Update
 // 如果设置了model i为bson.m可以使用数据库名和model名
 // selects 针对Struct更新时选择，或者忽略的字段，如果为空，更新所有非零值字段
-func Build(i interface{}, sch *schema.Schema, filter *Selector) (update Update, err error) {
+func Build(i interface{}, sch *schema.Schema, filter *Selector) (update Update, upsert bool, err error) {
 	if sch == nil {
-		return nil, errors.New("schema is nil")
+		err = errors.New("schema is nil")
+		return
 	}
 	reflectValue := reflect.Indirect(utils.ValueOf(i))
 	switch reflectValue.Kind() {
@@ -36,6 +38,7 @@ func Build(i interface{}, sch *schema.Schema, filter *Selector) (update Update, 
 	}
 
 	if v, ok := update[UpdateTypeSetOnInsert]; ok {
+		upsert = true
 		if r := filterSetOnInsert(v, update); len(r) > 0 {
 			update[UpdateTypeSetOnInsert] = r
 		} else {
@@ -63,10 +66,19 @@ func parseMap(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, 
 }
 
 func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector) (update Update, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			logger.Error("%v", e)
+		}
+	}()
 	update = make(Update)
 	for _, field := range sch.Fields {
-		v := reflectValue.FieldByIndex(field.StructField.Index)
-		if v.IsValid() && field.DBName != clause.MongoPrimaryName {
+		//logger.Trace("Field:%v ,index:%v", field.DBName, field.StructField.Index)
+		if field.DBName == clause.MongoPrimaryName {
+			continue
+		}
+		v := reflectValue.FieldByIndex(field.Index)
+		if v.IsValid() {
 			if has := filter.Has(field.DBName); has > 0 || (has == 0 && !v.IsZero()) {
 				update.Set(field.DBName, v.Interface())
 			}

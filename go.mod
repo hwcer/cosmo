@@ -2,8 +2,9 @@ module github.com/hwcer/cosmo
 
 go 1.18
 
+
 require (
-	github.com/hwcer/cosgo v0.0.3
+	github.com/hwcer/cosgo v0.0.4
 	github.com/hwcer/logger v0.0.3 // indirect
 	go.mongodb.org/mongo-driver v1.11.4
 )

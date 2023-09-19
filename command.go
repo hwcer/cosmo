@@ -38,7 +38,8 @@ func cmdCreate(tx *DB) (err error) {
 func cmdUpdate(tx *DB) (err error) {
 	stmt := tx.statement
 	var data update.Update
-	if data, err = update.Build(stmt.value, stmt.schema, &stmt.selector); err != nil {
+	var upsert bool
+	if data, upsert, err = update.Build(stmt.value, stmt.schema, &stmt.selector); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)
@@ -57,9 +58,9 @@ func cmdUpdate(tx *DB) (err error) {
 			tx.RowsAffected = result.MatchedCount
 		}
 	} else if stmt.updateAndModifyModel {
-		err = findOneAndUpdate(tx, coll, filter, data)
+		err = findOneAndUpdate(tx, coll, filter, data, upsert)
 	} else {
-		err = UpdateOne(tx, coll, filter, data)
+		err = UpdateOne(tx, coll, filter, data, upsert)
 	}
 
 	if err != nil {
@@ -69,9 +70,9 @@ func cmdUpdate(tx *DB) (err error) {
 	return
 }
 
-func UpdateOne(tx *DB, coll *mongo.Collection, filter clause.Filter, data update.Update) (err error) {
+func UpdateOne(tx *DB, coll *mongo.Collection, filter clause.Filter, data update.Update, upsert bool) (err error) {
 	opts := options.Update()
-	if _, ok := data[MongoSetOnInsert]; ok || tx.statement.upsert {
+	if upsert || tx.statement.upsert {
 		opts.SetUpsert(true)
 	}
 	var result *mongo.UpdateResult
@@ -82,11 +83,12 @@ func UpdateOne(tx *DB, coll *mongo.Collection, filter clause.Filter, data update
 	return
 }
 
-func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data update.Update) (err error) {
+func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data update.Update, upsert bool) (err error) {
 	opts := options.FindOneAndUpdate()
-	if _, ok := data[MongoSetOnInsert]; ok || tx.statement.upsert {
+	if upsert || tx.statement.upsert {
 		opts.SetUpsert(true)
 	}
+
 	if projection := tx.statement.selector.Projection(tx.statement.schema); len(projection) > 0 {
 		opts.SetProjection(projection)
 	}
