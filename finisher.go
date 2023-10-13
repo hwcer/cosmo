@@ -52,6 +52,7 @@ func (db *DB) Page(paging *values.Paging, where ...any) (tx *DB) {
 
 	if paging.Update > 0 {
 		if f := stmt.schema.LookUpField(DBNameUpdate); f != nil {
+			tx.Order(f.DBName, -1)
 			tx.Where(fmt.Sprintf("%v > ?", f.DBName), paging.Update)
 		}
 	}

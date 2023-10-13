@@ -17,14 +17,13 @@ type Selector struct {
 	projection map[string]bool
 }
 
-// Has -1 忽略，0-默认，1-选择
-func (this *Selector) Has(key string) int {
-	if r, ok := this.projection[key]; !ok {
-		return 0
-	} else if r {
-		return 1
+// Has 是否被选择
+func (this *Selector) Has(key string) bool {
+	_, ok := this.projection[key]
+	if this.selector == SelectorTypeOmit {
+		return !ok
 	} else {
-		return -1
+		return ok
 	}
 }
 

@@ -79,7 +79,7 @@ func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schem
 		}
 		v := reflectValue.FieldByIndex(field.Index)
 		if v.IsValid() {
-			if has := filter.Has(field.DBName); has > 0 || (has == 0 && !v.IsZero()) {
+			if filter.Has(field.DBName) {
 				update.Set(field.DBName, v.Interface())
 			}
 		}
