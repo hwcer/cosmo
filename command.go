@@ -190,7 +190,6 @@ func cmdQuery(tx *DB) (err error) {
 		if cursor, err = coll.Find(tx.statement.Context, filter, opts); err != nil {
 			return
 		}
-		cursor.RemainingBatchLength()
 		if err = cursor.All(tx.statement.Context, tx.statement.value); err == nil {
 			tx.RowsAffected = int64(tx.statement.reflectValue.Len())
 		}

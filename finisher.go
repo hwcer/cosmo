@@ -88,7 +88,7 @@ func (db *DB) Page(paging *values.Paging, where ...any) (tx *DB) {
 	if cursor, tx.Error = coll.Find(stmt.Context, filter, opts); tx.Error != nil {
 		return
 	}
-	cursor.RemainingBatchLength()
+	//cursor.RemainingBatchLength()
 	if reflectRows.Kind() == reflect.Ptr {
 		tx.Error = cursor.All(stmt.Context, paging.Rows)
 	} else {
