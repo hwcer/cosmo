@@ -11,6 +11,7 @@ import (
 const (
 	UpdateTypeSet         = "$set"
 	UpdateTypeInc         = "$inc"
+	UpdateTypeUnset       = "$unset"
 	UpdateTypeSetOnInsert = "$setOnInsert"
 )
 
@@ -52,7 +53,7 @@ func (u Update) Max(k string, v interface{}) {
 }
 
 func (u Update) UnSet(k string, v interface{}) {
-	u.Any("$unset", k, v)
+	u.Any(UpdateTypeUnset, k, v)
 }
 
 func (u Update) Pop(k string, v interface{}) {
@@ -112,7 +113,7 @@ func (u Update) Projection() bson.M {
 // Transform 转换成数据库字段名
 func (u Update) Transform(sch *schema.Schema) Update {
 	r := Update{}
-	for _, t := range []string{UpdateTypeSet, UpdateTypeInc, UpdateTypeSetOnInsert} {
+	for _, t := range []string{UpdateTypeSet, UpdateTypeInc, UpdateTypeUnset, UpdateTypeSetOnInsert} {
 		if m, ok := u[t]; ok {
 			d := bson.M{}
 			for k, v := range m {
@@ -125,6 +126,5 @@ func (u Update) Transform(sch *schema.Schema) Update {
 			r[t] = d
 		}
 	}
-
 	return r
 }
