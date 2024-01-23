@@ -2,10 +2,14 @@ module github.com/hwcer/cosmo
 
 go 1.18
 
+replace (
+	github.com/hwcer/cosgo v0.0.0 => ../cosgo
+	github.com/hwcer/logger v0.0.3 => ../logger
+)
 
 require (
-	github.com/hwcer/cosgo v0.0.4
-	github.com/hwcer/logger v0.0.3 // indirect
+	github.com/hwcer/cosgo v0.0.0
+	github.com/hwcer/logger v0.0.3
 	go.mongodb.org/mongo-driver v1.11.4
 )
 
