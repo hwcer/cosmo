@@ -9,7 +9,7 @@ replace (
 
 require (
 	github.com/hwcer/cosgo v0.0.0
-	github.com/hwcer/logger v0.0.3
+	github.com/hwcer/logger v0.0.5
 	go.mongodb.org/mongo-driver v1.11.4
 )
 
