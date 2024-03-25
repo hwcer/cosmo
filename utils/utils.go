@@ -2,7 +2,7 @@ package utils
 
 import (
 	"database/sql/driver"
-	"errors"
+
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
@@ -22,13 +22,13 @@ func init() {
 }
 
 func ToBson(i interface{}) (bson.M, error) {
-	switch i.(type) {
-	case map[string]interface{}:
-		return bson.M(i.(map[string]interface{})), nil
+	switch v := i.(type) {
+	case map[string]any:
+		return v, nil
 	case bson.M:
-		return i.(bson.M), nil
+		return v, nil
 	default:
-		return nil, errors.New("convert error")
+		return nil, fmt.Errorf("cosmo.update ToBson convert error:%v", i)
 	}
 }
 

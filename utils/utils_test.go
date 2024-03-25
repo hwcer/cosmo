@@ -12,3 +12,16 @@ func TestIsValidDBNameChar(t *testing.T) {
 		}
 	}
 }
+
+type mymap map[string]any
+
+func TestToBson(t *testing.T) {
+	m := mymap{}
+	m["k"] = "2"
+	if b, err := ToBson(m); err != nil {
+		t.Logf("%v", err)
+	} else {
+		t.Logf("%v", b)
+	}
+
+}
