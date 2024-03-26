@@ -13,13 +13,13 @@ import (
 const MongodbFieldSplit = "."
 
 type SetOnInsert interface {
-	SetOnInsert() (map[string]interface{}, error)
+	SetOnInsert() (map[string]any, error)
 }
 
 // Build 使用当前模型，将map bson.m Struct 转换成Update
 // 如果设置了model i为bson.m可以使用数据库名和model名
 // selects 针对Struct更新时选择，或者忽略的字段，如果为空，更新所有非零值字段
-func Build(i interface{}, sch *schema.Schema, filter *Selector) (update Update, upsert bool, err error) {
+func Build(i any, sch *schema.Schema, filter *Selector) (update Update, upsert bool, err error) {
 	if sch == nil {
 		err = errors.New("schema is nil")
 		return
