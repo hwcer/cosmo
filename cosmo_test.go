@@ -1,6 +1,7 @@
 package cosmo
 
 import (
+	"github.com/hwcer/cosgo/values"
 	"go.mongodb.org/mongo-driver/bson"
 	"strconv"
 	"testing"
@@ -33,7 +34,9 @@ func TestCosmo(t *testing.T) {
 
 	t.Logf("================Find Many=====================")
 	var roles []*Role
-	tx := db.Table("role").Omit("_id").Page(1, 2).Order("_id", -1).Find(&roles)
+	paging := &values.Paging{}
+	paging.Page = 1
+	tx := db.Table("role").Omit("_id").Page(paging, 2).Order("_id", -1).Find(&roles)
 	if db.Error != nil {
 		t.Logf("Find error:%v", tx.Error)
 	} else {
