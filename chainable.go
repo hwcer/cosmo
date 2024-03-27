@@ -92,6 +92,12 @@ func (db *DB) Order(key string, value int) (tx *DB) {
 	return
 }
 
+func (db *DB) Limit(limit int) (tx *DB) {
+	tx = db.getInstance()
+	tx.statement.Paging.Size = limit
+	return
+}
+
 // Merge 只更新Model,不会修改数据库
 // db.model(m).Merge(i)
 // 参数支持 Struct,map[string]interface{}
