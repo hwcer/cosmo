@@ -2,8 +2,8 @@ package update
 
 import (
 	"encoding/json"
-	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/utils"
+	"github.com/hwcer/schema"
 	"go.mongodb.org/mongo-driver/bson"
 	"strings"
 )

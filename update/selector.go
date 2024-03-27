@@ -1,7 +1,7 @@
 package update
 
 import (
-	"github.com/hwcer/cosgo/schema"
+	"github.com/hwcer/schema"
 )
 
 type SelectorType int8

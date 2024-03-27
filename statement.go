@@ -4,9 +4,9 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
+	"github.com/hwcer/schema"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -15,7 +15,7 @@ func NewStatement(db *DB) *Statement {
 		DB:      db,
 		Context: context.Background(),
 		Clause:  clause.New(),
-		paging:  &Paging{},
+		Paging:  &Paging{},
 		//settings: map[string]interface{}{},
 	}
 }
@@ -30,7 +30,7 @@ type Statement struct {
 	reflectValue         reflect.Value
 	Context              context.Context
 	Clause               *clause.Query
-	paging               *Paging
+	Paging               *Paging
 	schema               *schema.Schema
 	upsert               bool //文档不存在时自动插入新文档
 	multiple             bool //强制批量更新
@@ -89,7 +89,7 @@ func (stmt *Statement) DBName(name string) string {
 
 // Order 排序
 func (stmt *Statement) Order() (order bson.D) {
-	for _, v := range stmt.paging.order {
+	for _, v := range stmt.Paging.order {
 		v.Key = stmt.DBName(v.Key)
 		order = append(order, v)
 	}

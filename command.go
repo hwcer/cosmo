@@ -147,8 +147,8 @@ func cmdQuery(tx *DB) (err error) {
 	coll := tx.client.Database(tx.dbname).Collection(tx.statement.table)
 	if !multiple {
 		opts := options.FindOne()
-		if tx.statement.paging.offset > 0 {
-			opts.SetSkip(int64(tx.statement.paging.offset))
+		if offset := tx.statement.Paging.Offset(); offset > 0 {
+			opts.SetSkip(int64(offset))
 		}
 		if len(order) > 0 {
 			opts.SetSort(order)
@@ -174,11 +174,11 @@ func cmdQuery(tx *DB) (err error) {
 		}
 	} else {
 		opts := options.Find()
-		if tx.statement.paging.limit > 0 {
-			opts.SetLimit(int64(tx.statement.paging.limit))
+		if tx.statement.Paging.Size > 0 {
+			opts.SetLimit(int64(tx.statement.Paging.Size))
 		}
-		if tx.statement.paging.offset > 0 {
-			opts.SetSkip(int64(tx.statement.paging.offset))
+		if offset := tx.statement.Paging.Offset(); offset > 0 {
+			opts.SetSkip(int64(offset))
 		}
 		if len(order) > 0 {
 			opts.SetSort(order)

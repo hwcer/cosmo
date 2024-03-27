@@ -3,7 +3,7 @@ package cosmo
 import (
 	"context"
 	"fmt"
-	"github.com/hwcer/cosgo/schema"
+	"github.com/hwcer/schema"
 	"go.mongodb.org/mongo-driver/mongo"
 	"strings"
 )

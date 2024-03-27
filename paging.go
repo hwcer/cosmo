@@ -7,25 +7,39 @@ import (
 
 // Paging 分页
 type Paging struct {
-	order  []bson.E //排序
-	limit  int      //每页大小
-	offset int      //当前页
+	order []bson.E //排序
+	//limit  int      //每页大小
+	//offset int      //当前页
+
+	Rows   interface{} `json:"rows"`
+	Page   int         `json:"page"`   //当前页
+	Size   int         `json:"size"`   //每页大小
+	Total  int         `json:"total"`  //总页码数
+	Record int         `json:"record"` //总记录数
+	Update int64       `json:"update"` //最后更新时间
 }
 
-// Reset 设置分页，page当前页,size每页大小
-// 相当于同时设置limit offset
-func (this *Paging) Reset(page, size int) {
-	this.limit = size
-	if page > 1 {
-		this.offset = (page - 1) * size
+func (this *Paging) Init(size int) {
+	if this.Page <= 0 {
+		this.Page = 1
+	}
+	if this.Size == 0 {
+		this.Size = size
+	} else if this.Size > size {
+		this.Size = size
 	}
 }
 
-func (this *Paging) Limit(limit int) {
-	this.limit = limit
+func (this *Paging) Result(r int) {
+	this.Record = r
+	this.Total = r / this.Size
+	if r%this.Size != 0 {
+		this.Total += 1
+	}
 }
-func (this *Paging) Offset(offset int) {
-	this.offset = offset
+
+func (this *Paging) Offset() int {
+	return (this.Page - 1) * this.Size
 }
 
 // Order 排序方式 1 和 -1 来指定排序的方式，其中 1 为升序排列，而 -1 是用于降序排列。
@@ -43,9 +57,9 @@ func (this *Paging) Order(key string, sort int) {
 // Options 转换成FindOptions
 func (this *Paging) Options() *options.FindOptions {
 	opts := options.Find()
-	opts.SetLimit(int64(this.limit))
-	if this.offset > 1 {
-		opts.SetSkip(int64(this.offset))
+	opts.SetLimit(int64(this.Size))
+	if offset := this.Offset(); offset > 1 {
+		opts.SetSkip(int64(offset))
 	}
 	if len(this.order) > 0 {
 		opts.SetSort(this.order)

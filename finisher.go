@@ -2,7 +2,8 @@ package cosmo
 
 import (
 	"fmt"
-	"github.com/hwcer/cosgo/values"
+
+	//"github.com/hwcer/cosgo/values"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -21,8 +22,9 @@ const DefaultPageSize = 100
 //}
 
 // Page 分页查询
-func (db *DB) Page(paging *values.Paging, where ...any) (tx *DB) {
+func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 	//var err error
+	db.statement.Paging = paging
 	paging.Init(DefaultPageSize)
 	if paging.Rows == nil {
 		paging.Rows = []bson.M{}
@@ -39,7 +41,6 @@ func (db *DB) Page(paging *values.Paging, where ...any) (tx *DB) {
 		tx = tx.Where(where[0], where[1:]...)
 	}
 	stmt.value = paging.Rows
-	stmt.paging.Reset(paging.Page, paging.Size)
 
 	if tx = tx.statement.Parse(); tx.Error != nil {
 		return
@@ -64,7 +65,7 @@ func (db *DB) Page(paging *values.Paging, where ...any) (tx *DB) {
 	if paging.Record == 0 && tx.Error == nil {
 		var val int64
 		if val, tx.Error = coll.CountDocuments(stmt.Context, filter); tx.Error == nil {
-			paging.Count(int(val))
+			paging.Result(int(val))
 		} else {
 			return
 		}
@@ -72,11 +73,11 @@ func (db *DB) Page(paging *values.Paging, where ...any) (tx *DB) {
 	//find
 	order := tx.statement.Order()
 	opts := options.Find()
-	if stmt.paging.limit > 0 {
-		opts.SetLimit(int64(tx.statement.paging.limit))
+	if stmt.Paging.Size > 0 {
+		opts.SetLimit(int64(tx.statement.Paging.Size))
 	}
-	if stmt.paging.offset > 0 {
-		opts.SetSkip(int64(tx.statement.paging.offset))
+	if offset := stmt.Paging.Offset(); offset > 0 {
+		opts.SetSkip(int64(offset))
 	}
 	if len(order) > 0 {
 		opts.SetSort(order)

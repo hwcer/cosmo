@@ -88,21 +88,7 @@ func (db *DB) Where(query interface{}, args ...interface{}) (tx *DB) {
 // Order specify order when retrieve records from dbname
 func (db *DB) Order(key string, value int) (tx *DB) {
 	tx = db.getInstance()
-	tx.statement.paging.Order(key, value)
-	return
-}
-
-// Limit specify the number of records to be retrieved
-func (db *DB) Limit(limit int) (tx *DB) {
-	tx = db.getInstance()
-	tx.statement.paging.Limit(limit)
-	return
-}
-
-// Offset specify the number of records to skip before starting to return the records
-func (db *DB) Offset(offset int) (tx *DB) {
-	tx = db.getInstance()
-	tx.statement.paging.Offset(offset)
+	tx.statement.Paging.Order(key, value)
 	return
 }
 

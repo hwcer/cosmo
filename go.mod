@@ -5,9 +5,8 @@ go 1.21.0
 toolchain go1.21.5
 
 require (
-	github.com/hwcer/cosgo v0.0.5
 	github.com/hwcer/logger v0.0.5
-	github.com/hwcer/schema v0.0.1
+	github.com/hwcer/schema v0.0.2
 	go.mongodb.org/mongo-driver v1.14.0
 )
 
