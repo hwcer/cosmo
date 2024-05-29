@@ -72,18 +72,19 @@ func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schem
 		}
 	}()
 	update = make(Update)
-	for _, field := range sch.Fields {
-		//logger.Trace("Field:%v ,index:%v", field.DBName, field.StructField.Index)
-		if field.DBName == clause.MongoPrimaryName {
-			continue
+	sch.Range(func(field *schema.Field) bool {
+		k := field.DBName
+		if k == clause.MongoPrimaryName {
+			return true
 		}
 		v := reflectValue.FieldByIndex(field.Index)
 		if v.IsValid() {
-			if filter.Has(field.DBName) {
-				update.Set(field.DBName, v.Interface())
+			if filter.Has(k) {
+				update.Set(k, v.Interface())
 			}
 		}
-	}
+		return true
+	})
 	if s, ok := desc.(SetOnInsert); ok {
 		var v map[string]interface{}
 		if v, err = s.SetOnInsert(); err == nil && len(v) > 0 {

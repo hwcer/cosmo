@@ -6,7 +6,7 @@ toolchain go1.22.2
 
 require (
 	github.com/hwcer/logger v0.0.5
-	github.com/hwcer/schema v0.0.3
+	github.com/hwcer/schema v0.0.4
 	go.mongodb.org/mongo-driver v1.15.0
 )
 
