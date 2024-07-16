@@ -23,13 +23,13 @@ func New() Update {
 
 type Update map[string]bson.M
 
-func (u Update) Has(filed string) bool {
-	for _, v := range u {
-		if _, has := v[filed]; has {
-			return true
-		}
+func (u Update) Has(opt string, filed string) bool {
+	if vs, ok := u[opt]; !ok {
+		return false
+	} else {
+		_, ok = vs[filed]
+		return ok
 	}
-	return false
 }
 
 func (u Update) Set(k string, v interface{}) {
@@ -52,8 +52,8 @@ func (u Update) Max(k string, v interface{}) {
 	u.Any("$max", k, v)
 }
 
-func (u Update) UnSet(k string, v interface{}) {
-	u.Any(UpdateTypeUnset, k, v)
+func (u Update) Unset(k string) {
+	u.Any(UpdateTypeUnset, k, 1)
 }
 
 func (u Update) Pop(k string, v interface{}) {
