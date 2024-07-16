@@ -31,6 +31,19 @@ func (u Update) Has(opt string, filed string) bool {
 		return ok
 	}
 }
+func (u Update) Get(opt string, k string) (v any, ok bool) {
+	var vs bson.M
+	if vs, ok = u[opt]; ok {
+		v, ok = vs[k]
+	}
+	return
+}
+
+func (u Update) Remove(opt string, k string) {
+	if vs, ok := u[opt]; ok {
+		delete(vs, k)
+	}
+}
 
 func (u Update) Set(k string, v interface{}) {
 	u.Any(UpdateTypeSet, k, v)
