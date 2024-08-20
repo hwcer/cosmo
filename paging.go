@@ -23,9 +23,7 @@ func (this *Paging) Init(size int) {
 	if this.Page <= 0 {
 		this.Page = 1
 	}
-	if this.Size == 0 {
-		this.Size = size
-	} else if this.Size > size {
+	if this.Size == 0 || this.Size > size {
 		this.Size = size
 	}
 }
