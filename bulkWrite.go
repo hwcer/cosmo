@@ -13,6 +13,17 @@ type BulkWrite struct {
 	opts   []*options.BulkWriteOptions
 	models []mongo.WriteModel
 	result *mongo.BulkWriteResult
+	filter BulkWriteUpdateFilter
+}
+
+type ModelBulkWriteFilter interface {
+	BulkWriteFilter(up update.Update)
+}
+
+type BulkWriteUpdateFilter func(up update.Update)
+
+func (this *BulkWrite) SetUpdateFilter(filter BulkWriteUpdateFilter) {
+	this.filter = filter
 }
 
 func (this *BulkWrite) Save() (err error) {
@@ -46,6 +57,9 @@ func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
 	if err != nil {
 		_ = this.tx.Errorf(err)
 		return
+	}
+	if this.filter == nil {
+		this.filter(value)
 	}
 	model := mongo.NewUpdateOneModel()
 	model.SetFilter(query.Build(stmt.schema))

@@ -110,10 +110,16 @@ func (db *DB) Collection(model any) (tx *DB, coll *mongo.Collection) {
 }
 
 // BulkWrite 批量写入
-func (db *DB) BulkWrite(model interface{}) *BulkWrite {
+func (db *DB) BulkWrite(model any, filter ...BulkWriteUpdateFilter) *BulkWrite {
 	tx := db.Model(model)
 	tx = tx.statement.Parse()
-	return &BulkWrite{tx: tx}
+	bw := &BulkWrite{tx: tx}
+	if len(filter) > 0 {
+		bw.SetUpdateFilter(filter[0])
+	} else if modelBulkWriteFilter, ok := model.(ModelBulkWriteFilter); ok {
+		bw.SetUpdateFilter(modelBulkWriteFilter.BulkWriteFilter)
+	}
+	return bw
 }
 
 // WithContext change current instance db's context to ctx
