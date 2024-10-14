@@ -58,7 +58,7 @@ func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
 		_ = this.tx.Errorf(err)
 		return
 	}
-	if this.filter == nil {
+	if this.filter != nil {
 		this.filter(value)
 	}
 	model := mongo.NewUpdateOneModel()
