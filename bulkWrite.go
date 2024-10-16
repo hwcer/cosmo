@@ -49,7 +49,9 @@ func (this *BulkWrite) Save() (err error) {
 	return
 }
 
-func (this *BulkWrite) Update(data interface{}, where ...interface{}) {
+// Update 更新
+// data   map[string]any  update.Update  bson.M
+func (this *BulkWrite) Update(data any, where ...interface{}) {
 	stmt := this.tx.statement
 	query := clause.New()
 	query.Where(where[0], where[1:]...)

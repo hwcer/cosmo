@@ -21,6 +21,12 @@ func New() Update {
 	return make(Update)
 }
 
+func NewFromMap(v map[string]any) Update {
+	r := make(Update)
+	r.MSet(v)
+	return r
+}
+
 type Update map[string]bson.M
 
 func (u Update) Has(opt string, filed string) bool {
@@ -89,6 +95,15 @@ func (u Update) Any(t, k string, v interface{}) {
 		u[t] = bson.M{}
 	}
 	u[t][k] = v
+}
+func (u Update) MSet(vs map[string]any) {
+	if _, ok := u[UpdateTypeSet]; !ok {
+		u[UpdateTypeSet] = vs
+	} else {
+		for k, v := range vs {
+			u[UpdateTypeSet][k] = v
+		}
+	}
 }
 
 func (u Update) Convert(t string, i interface{}) error {

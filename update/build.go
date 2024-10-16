@@ -24,6 +24,7 @@ func Build(i any, sch *schema.Schema, filter *Selector) (update Update, upsert b
 		err = errors.New("schema is nil")
 		return
 	}
+
 	reflectValue := reflect.Indirect(utils.ValueOf(i))
 	switch reflectValue.Kind() {
 	case reflect.Map:
@@ -55,6 +56,8 @@ func parseMap(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, 
 	switch v := desc.(type) {
 	case Update:
 		update = desc.(Update)
+	case map[string]any:
+		update = NewFromMap(v)
 	default:
 		update = Update{}
 		err = update.Convert(UpdateTypeSet, v)
