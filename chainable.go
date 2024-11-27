@@ -2,8 +2,8 @@ package cosmo
 
 import (
 	"fmt"
+	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
-	"github.com/hwcer/schema"
 	"reflect"
 )
 

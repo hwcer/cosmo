@@ -3,10 +3,10 @@ package update
 import (
 	"errors"
 	"fmt"
+	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/utils"
-	"github.com/hwcer/logger"
-	"github.com/hwcer/schema"
 	"reflect"
 )
 

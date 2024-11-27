@@ -4,9 +4,9 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
-	"github.com/hwcer/schema"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
