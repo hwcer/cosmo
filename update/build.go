@@ -55,7 +55,9 @@ func Build(i any, sch *schema.Schema, filter *Selector) (update Update, upsert b
 func parseMap(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector) (update Update, err error) {
 	switch v := desc.(type) {
 	case Update:
-		update = desc.(Update)
+		update = v
+	case *Update:
+		update = *v
 	case map[string]any:
 		update = NewFromMap(v)
 	default:
