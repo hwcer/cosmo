@@ -2,6 +2,7 @@ package cosmo
 
 import (
 	"fmt"
+	"github.com/hwcer/cosmo/update"
 
 	//"github.com/hwcer/cosgo/values"
 	"go.mongodb.org/mongo-driver/bson"
@@ -12,14 +13,16 @@ import (
 
 const DefaultPageSize = 100
 
-//func (db *DB) reset() {
-//	db.statement.model = nil
-//	db.statement.schema = nil
-//	db.statement.paging = &Paging{}
-//	db.statement.Clause = clause.New()
-//	db.statement.multiple = false
-//	db.statement.updateAndModifyModel = false
-//}
+func (db *DB) Set(key string, val any) (tx *DB) {
+	up := update.Update{}
+	up.Set(key, val)
+	return db.Update(up)
+}
+func (db *DB) Inc(key string, val int) (tx *DB) {
+	up := update.Update{}
+	up.Inc(key, val)
+	return db.Update(up)
+}
 
 // Page 分页查询
 func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {

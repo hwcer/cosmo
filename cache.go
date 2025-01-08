@@ -71,6 +71,9 @@ type Cache struct {
 	dataset *CacheData
 }
 
+func (this *Cache) Len() int {
+	return len(this.dataset.dict)
+}
 func (this *Cache) Get(id string) any {
 	return this.dataset.dict[id]
 }
@@ -148,14 +151,21 @@ func (this *Cache) Delete(id string) {
 	this.dataset = this.dataset.Delete(id)
 }
 
-func (this *Cache) Reload(ts int64) error {
+func (this *Cache) Reload(ts int64, handle ...CacheHandle) error {
 	if ts > 0 && ts <= this.time {
 		return nil
 	}
+	var h CacheHandle
+	if len(handle) > 0 {
+		h = handle[0]
+	} else {
+		h = this.handle
+	}
+
 	this.locker.Lock()
 	defer this.locker.Unlock()
 	dataset := this.dataset.Copy()
-	err := this.handle.Reload(ts, dataset.setter)
+	err := h.Reload(ts, dataset.setter)
 	if err != nil {
 		return err
 	}

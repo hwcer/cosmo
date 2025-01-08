@@ -32,9 +32,6 @@ func (this *Paging) Result(r int) {
 	if this.Size == 0 {
 		this.Init(100)
 	}
-	if r == 0 {
-		return
-	}
 	this.Record = r
 	this.Total = r / this.Size
 	if r%this.Size != 0 {
