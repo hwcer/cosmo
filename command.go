@@ -28,6 +28,8 @@ func cmdCreate(tx *DB) (err error) {
 		if result, err = coll.InsertMany(tx.statement.Context, documents, opts); err == nil {
 			tx.RowsAffected = int64(len(result.InsertedIDs))
 		}
+	default:
+		panic("unhandled default case")
 	}
 	return
 }

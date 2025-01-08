@@ -39,8 +39,8 @@ func Build(i any, sch *schema.Schema, filter *Selector) (update Update, upsert b
 	}
 
 	if v, ok := update[UpdateTypeSetOnInsert]; ok {
-		upsert = true
 		if r := filterSetOnInsert(v, update); len(r) > 0 {
+			upsert = true
 			update[UpdateTypeSetOnInsert] = r
 		} else {
 			delete(update, UpdateTypeSetOnInsert)
@@ -83,7 +83,7 @@ func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schem
 			return true
 		}
 		v := reflectValue.FieldByIndex(field.Index)
-		if v.IsValid() {
+		if v.IsValid() && !v.IsZero() {
 			if filter.Has(k) {
 				update.Set(k, v.Interface())
 			}

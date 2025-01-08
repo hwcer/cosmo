@@ -29,6 +29,12 @@ func (this *Paging) Init(size int) {
 }
 
 func (this *Paging) Result(r int) {
+	if this.Size == 0 {
+		this.Init(100)
+	}
+	if r == 0 {
+		return
+	}
 	this.Record = r
 	this.Total = r / this.Size
 	if r%this.Size != 0 {
@@ -63,4 +69,25 @@ func (this *Paging) Options() *options.FindOptions {
 		opts.SetSort(this.order)
 	}
 	return opts
+}
+
+// Range 遍历第N页的索引下标
+func (this *Paging) Range(page int, handle func(int)) {
+	if page < 1 {
+		page = 1
+	}
+	if page > this.Total {
+		return
+	}
+	s := (page - 1) * this.Size
+	if s >= this.Record {
+		return
+	}
+	e := s + this.Size
+	if e > this.Record {
+		e = this.Record
+	}
+	for i := s; i < e; i++ {
+		handle(i)
+	}
 }
