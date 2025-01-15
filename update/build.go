@@ -83,10 +83,8 @@ func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schem
 			return true
 		}
 		v := reflectValue.FieldByIndex(field.Index)
-		if v.IsValid() && !v.IsZero() {
-			if filter.Has(k) {
-				update.Set(k, v.Interface())
-			}
+		if filter.Has(k) && v.IsValid() && !v.IsZero() {
+			update.Set(k, v.Interface())
 		}
 		return true
 	})

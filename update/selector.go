@@ -19,6 +19,9 @@ type Selector struct {
 
 // Has 是否被选择
 func (this *Selector) Has(key string) bool {
+	if this.projection == nil {
+		return true //默认选择所有
+	}
 	_, ok := this.projection[key]
 	if this.selector == SelectorTypeOmit {
 		return !ok
