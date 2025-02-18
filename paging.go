@@ -7,10 +7,7 @@ import (
 
 // Paging 分页
 type Paging struct {
-	order []bson.E //排序
-	//limit  int      //每页大小
-	//offset int      //当前页
-
+	order  []bson.E    //排序
 	Rows   interface{} `json:"rows"`
 	Page   int         `json:"page"`   //当前页
 	Size   int         `json:"size"`   //每页大小
