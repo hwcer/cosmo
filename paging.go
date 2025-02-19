@@ -1,13 +1,12 @@
 package cosmo
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Paging 分页
 type Paging struct {
-	order  []bson.E    //排序
+	//order  []bson.E    //排序
 	Rows   interface{} `json:"rows"`
 	Page   int         `json:"page"`   //当前页
 	Size   int         `json:"size"`   //每页大小
@@ -40,18 +39,6 @@ func (this *Paging) Offset() int {
 	return (this.Page - 1) * this.Size
 }
 
-// Order 排序方式 1 和 -1 来指定排序的方式，其中 1 为升序排列，而 -1 是用于降序排列。
-func (this *Paging) Order(key string, sort int) {
-	if sort > 0 {
-		sort = 1
-	} else {
-		sort = -1
-	}
-	this.order = append(this.order, bson.E{
-		Key: key, Value: sort,
-	})
-}
-
 // Options 转换成FindOptions
 func (this *Paging) Options() *options.FindOptions {
 	opts := options.Find()
@@ -59,9 +46,9 @@ func (this *Paging) Options() *options.FindOptions {
 	if offset := this.Offset(); offset > 1 {
 		opts.SetSkip(int64(offset))
 	}
-	if len(this.order) > 0 {
-		opts.SetSort(this.order)
-	}
+	//if len(this.order) > 0 {
+	//	opts.SetSort(this.order)
+	//}
 	return opts
 }
 

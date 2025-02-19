@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
+	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
 )
 
@@ -15,9 +16,9 @@ import (
 //	db.model(&user).Update("name", "hello")
 func (db *DB) Model(value any, modify ...bool) (tx *DB) {
 	tx = db.getInstance()
-	tx.statement.model = value
+	tx.stmt.model = value
 	if len(modify) > 0 && modify[0] {
-		tx.statement.updateAndModifyModel = true
+		tx.stmt.updateAndModifyModel = true
 	}
 	return
 }
@@ -27,28 +28,28 @@ func (db *DB) Model(value any, modify ...bool) (tx *DB) {
 
 func (db *DB) Table(name string) (tx *DB) {
 	tx = db.getInstance()
-	tx.statement.table = name
+	tx.stmt.table = name
 	return
 }
 
 // Upsert update时如果不存在自动insert
 func (db *DB) Upsert() (tx *DB) {
 	tx = db.getInstance()
-	tx.statement.upsert = true
+	tx.stmt.upsert = true
 	return
 }
 
 // Multiple 强制批量更新
 func (db *DB) Multiple() (tx *DB) {
 	tx = db.getInstance()
-	tx.statement.multiple = true
+	tx.stmt.multiple = true
 	return
 }
 
 // Omit specify fields that you want to ignore when creating, updating and querying
 func (db *DB) Omit(columns ...string) (tx *DB) {
 	tx = db.getInstance()
-	if !tx.statement.selector.Omit(columns...) {
+	if !tx.stmt.selector.Omit(columns...) {
 		tx.Error = ErrOmitOnSelectsExist
 	}
 	return
@@ -57,64 +58,40 @@ func (db *DB) Omit(columns ...string) (tx *DB) {
 // Select specify fields that you want when querying, creating, updating
 func (db *DB) Select(columns ...string) (tx *DB) {
 	tx = db.getInstance()
-	if !tx.statement.selector.Select(columns...) {
+	if !tx.stmt.selector.Select(columns...) {
 		tx.Error = ErrSelectOnOmitsExist
 	}
 	return
 }
 
-// FindAndUpdate 查询并更新,需要配合Select使用
-//func (db *DB) FindAndUpdate() (tx *DB) {
-//	tx = db.getInstance()
-//	tx.statement.findAndUpdate = true
-//	return
-//}
-
 // Where 查询条件
 // 参考 query包
 func (db *DB) Where(query interface{}, args ...interface{}) (tx *DB) {
 	tx = db.getInstance()
-	tx.statement.Clause.Where(query, args...)
+	tx.stmt.Clause.Where(query, args...)
 	return
 }
 
-// Page 分页设置 page-当前页，size-每页大小
-//func (db *DB) Page(page, size int) (tx *DB) {
-//	tx = db.getInstance()
-//	tx.statement.paging.Page(page, size)
-//	return
-//}
-
 // Order specify order when retrieve records from dbname
+// Order 排序方式 1 和 -1 来指定排序的方式，其中 1 为升序排列，而 -1 是用于降序排列。
 func (db *DB) Order(key string, value int) (tx *DB) {
 	tx = db.getInstance()
-	tx.statement.Paging.Order(key, value)
+	if value > 0 {
+		value = 1
+	} else {
+		value = -1
+	}
+	tx.stmt.orders = append(tx.stmt.orders, bson.E{
+		Key: key, Value: value,
+	})
 	return
 }
 
 func (db *DB) Limit(limit int) (tx *DB) {
 	tx = db.getInstance()
-	tx.statement.Paging.Size = limit
+	tx.stmt.Paging.Size = limit
 	return
 }
-
-// Merge 只更新Model,不会修改数据库
-// db.model(m).Merge(i)
-// 参数支持 Struct,map[string]interface{}
-//func (db *DB) Merge(i interface{}) error {
-//	tx := db.statement.Parse()
-//	if tx.Error != nil {
-//		return tx.Error
-//	}
-//	values, err := update.Build(i, tx.statement.schema, &tx.statement.selector)
-//	if err != nil {
-//		return err
-//	}
-//	if err = tx.SetColumn(values[update.UpdateTypeSet]); err != nil {
-//		return err
-//	}
-//	return nil
-//}
 
 // SetColumn set column's value to model
 //
@@ -125,14 +102,14 @@ func (db *DB) SetColumn(data map[string]interface{}) (err error) {
 			err = fmt.Errorf("%v", e)
 		}
 	}()
-	if db.statement.model == nil {
+	if db.stmt.model == nil {
 		return nil
 	}
-	sch, err := schema.Parse(db.statement.model)
+	sch, err := schema.Parse(db.stmt.model)
 	if err != nil {
 		return err
 	}
-	reflectValue := reflect.ValueOf(db.statement.model)
+	reflectValue := reflect.ValueOf(db.stmt.model)
 	//logger.Debug("reflectModel:%+v", reflectModel.Interface())
 	for k, v := range data {
 		field := sch.LookUpField(k)

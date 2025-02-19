@@ -44,12 +44,12 @@ func (cs *callbacks) Delete() *processor {
 //
 //	handle func(tx *DB,query BuildUpdate.M) error
 func (p *processor) Execute(db *DB) (tx *DB) {
-	tx = db.statement.Parse()
+	tx = db.stmt.Parse()
 	if tx.Error != nil {
 		return
 	}
 
-	stmt := tx.statement
+	stmt := tx.stmt
 	if stmt.table == "" {
 		tx.Errorf("table not set, please set it like: db.model(&user) or db.table(\"users\") %+v")
 	}

@@ -5,6 +5,9 @@ import "github.com/hwcer/cosgo/schema"
 // Build 生成mongo查询条件
 func (q *Query) Build(model *schema.Schema) Filter {
 	filter := make(Filter)
+	if q.filter != nil {
+		filter.Merge(q.filter)
+	}
 	for _, node := range q.where {
 		build(model, filter, node)
 	}

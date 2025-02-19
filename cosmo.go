@@ -12,8 +12,8 @@ import (
 // DB GORM DB definition
 type DB struct {
 	*Config
+	stmt         *Statement
 	clone        bool //是否克隆体
-	statement    *Statement
 	Error        error
 	RowsAffected int64 //操作影响的条数
 }
@@ -33,7 +33,7 @@ func New(configs ...*Config) (db *DB) {
 	//}
 	db = &DB{Config: config}
 	db.callbacks = initializeCallbacks()
-	db.statement = NewStatement(db)
+	db.stmt = NewStatement(db)
 	return
 }
 
@@ -74,14 +74,14 @@ func (db *DB) Session(session *Session) *DB {
 		}
 	)
 
-	tx.statement = NewStatement(tx)
+	tx.stmt = NewStatement(tx)
 
 	if session.DBName != "" {
 		tx.Config.dbname = session.DBName
 	}
 
 	if session.Context != nil {
-		tx.statement.Context = session.Context
+		tx.stmt.Context = session.Context
 	}
 
 	//if session.Logger != nil {
@@ -103,7 +103,7 @@ func (db *DB) Collection(model any) (tx *DB, coll *mongo.Collection) {
 		tx = db.Model(model)
 	}
 	tx = tx.callbacks.Call(tx, func(tx *DB) error {
-		coll = tx.client.Database(tx.dbname).Collection(tx.statement.table)
+		coll = tx.client.Database(tx.dbname).Collection(tx.stmt.table)
 		return nil
 	})
 	return
@@ -112,7 +112,7 @@ func (db *DB) Collection(model any) (tx *DB, coll *mongo.Collection) {
 // BulkWrite 批量写入
 func (db *DB) BulkWrite(model any, filter ...BulkWriteUpdateFilter) *BulkWrite {
 	tx := db.Model(model)
-	tx = tx.statement.Parse()
+	tx = tx.stmt.Parse()
 	bw := &BulkWrite{tx: tx}
 	if len(filter) > 0 {
 		bw.SetUpdateFilter(filter[0])
@@ -143,7 +143,7 @@ func (db *DB) getInstance() *DB {
 		return db
 	}
 	tx := &DB{Config: db.Config, clone: true}
-	tx.statement = NewStatement(tx)
+	tx.stmt = NewStatement(tx)
 	return tx
 }
 

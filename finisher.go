@@ -25,13 +25,13 @@ func (db *DB) Inc(key string, val int) (tx *DB) {
 // Page 分页查询
 func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 	//var err error
-	db.statement.Paging = paging
+	db.stmt.Paging = paging
 	paging.Init(DefaultPageSize)
 	if paging.Rows == nil {
 		paging.Rows = []bson.M{}
 	}
 	tx = db.getInstance()
-	stmt := tx.statement
+	stmt := tx.stmt
 	reflectRows := reflect.ValueOf(paging.Rows)
 	indirectRows := reflect.Indirect(reflectRows)
 	if indirectRows.Kind() != reflect.Array && indirectRows.Kind() != reflect.Slice {
@@ -43,7 +43,7 @@ func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 	}
 	stmt.value = paging.Rows
 
-	if tx = tx.statement.Parse(); tx.Error != nil {
+	if tx = tx.stmt.Parse(); tx.Error != nil {
 		return
 	}
 
@@ -61,7 +61,7 @@ func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 	//defer tx.reset()
 
 	coll := tx.client.Database(tx.dbname).Collection(stmt.table)
-	filter := tx.statement.Clause.Build(stmt.schema)
+	filter := tx.stmt.Clause.Build(stmt.schema)
 
 	if paging.Record == 0 && tx.Error == nil {
 		var val int64
@@ -72,10 +72,10 @@ func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 		}
 	}
 	//find
-	order := tx.statement.Order()
+	order := tx.stmt.Order()
 	opts := options.Find()
 	if stmt.Paging.Size > 0 {
-		opts.SetLimit(int64(tx.statement.Paging.Size))
+		opts.SetLimit(int64(tx.stmt.Paging.Size))
 	}
 	if offset := stmt.Paging.Offset(); offset > 0 {
 		opts.SetSkip(int64(offset))
@@ -83,7 +83,7 @@ func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 	if len(order) > 0 {
 		opts.SetSort(order)
 	}
-	if projection := tx.statement.selector.Projection(stmt.schema); len(projection) > 0 {
+	if projection := tx.stmt.selector.Projection(stmt.schema); len(projection) > 0 {
 		opts.SetProjection(projection)
 	}
 	var cursor *mongo.Cursor
@@ -109,14 +109,14 @@ func (db *DB) Find(val any, where ...any) (tx *DB) {
 	if len(where) > 0 {
 		tx = db.Where(where[0], where[1:]...)
 	}
-	tx.statement.value = val
+	tx.stmt.value = val
 	return tx.callbacks.Query().Execute(tx)
 }
 
 // Create insert the value into dbname
 func (db *DB) Create(value interface{}) (tx *DB) {
 	tx = db.getInstance()
-	tx.statement.value = value
+	tx.stmt.value = value
 	return tx.callbacks.Create().Execute(tx)
 }
 
@@ -133,7 +133,7 @@ func (db *DB) Update(values any, conds ...any) (tx *DB) {
 	if len(conds) > 0 {
 		tx = tx.Where(conds[0], conds[1:]...)
 	}
-	tx.statement.value = values
+	tx.stmt.value = values
 	return tx.callbacks.Update().Execute(tx)
 }
 
@@ -145,7 +145,7 @@ func (db *DB) Update(values any, conds ...any) (tx *DB) {
 func (db *DB) Delete(conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
-		tx.statement.value = conds[0]
+		tx.stmt.value = conds[0]
 		db.Where(conds[0], conds[1:]...)
 	}
 	return tx.callbacks.Delete().Execute(tx)
@@ -158,13 +158,13 @@ func (db *DB) Count(count interface{}, conds ...interface{}) (tx *DB) {
 		tx = tx.Where(conds[0], conds[1:]...)
 	}
 
-	tx.statement.value = count
-	return tx.statement.callbacks.Call(tx, func(db *DB) (err error) {
+	tx.stmt.value = count
+	return tx.stmt.callbacks.Call(tx, func(db *DB) (err error) {
 		var val int64
-		coll := tx.client.Database(tx.dbname).Collection(tx.statement.table)
-		filter := tx.statement.Clause.Build(db.statement.schema)
-		if val, err = coll.CountDocuments(tx.statement.Context, filter); err == nil {
-			tx.statement.reflectValue.SetInt(val)
+		coll := tx.client.Database(tx.dbname).Collection(tx.stmt.table)
+		filter := tx.stmt.Clause.Build(db.stmt.schema)
+		if val, err = coll.CountDocuments(tx.stmt.Context, filter); err == nil {
+			tx.stmt.reflectValue.SetInt(val)
 		}
 		return err
 	})

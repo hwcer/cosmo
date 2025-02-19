@@ -32,6 +32,7 @@ type Statement struct {
 	Clause               *clause.Query
 	Paging               *Paging
 	schema               *schema.Schema
+	orders               []bson.E
 	upsert               bool //文档不存在时自动插入新文档
 	multiple             bool //强制批量更新
 	updateAndModifyModel bool //更新数据库成功时修改将最终结果写入到model
@@ -89,7 +90,7 @@ func (stmt *Statement) DBName(name string) string {
 
 // Order 排序
 func (stmt *Statement) Order() (order bson.D) {
-	for _, v := range stmt.Paging.order {
+	for _, v := range stmt.orders {
 		v.Key = stmt.DBName(v.Key)
 		order = append(order, v)
 	}
