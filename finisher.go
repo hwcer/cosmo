@@ -9,7 +9,7 @@ import (
 	"reflect"
 )
 
-const DefaultPageSize = 100
+const DefaultPageSize = 1000
 
 func (db *DB) Set(key string, val any) (tx *DB) {
 	up := update.Update{}

@@ -32,7 +32,11 @@ func (db *DB) indexes(model interface{}, index *schema.Index) (err error) {
 		return tx.Error
 	}
 	indexView := coll.Indexes()
-	_, err = indexView.CreateOne(context.Background(), index.Build())
+	var mongoIndex mongo.IndexModel
+	if mongoIndex, err = index.Build(); err != nil {
+		return err
+	}
+	_, err = indexView.CreateOne(context.Background(), mongoIndex)
 	if cv, ok := err.(mongo.CommandError); ok && cv.Code == 85 || strings.HasPrefix(cv.Message, "Index already exists with a different name") {
 		err = nil
 	}
