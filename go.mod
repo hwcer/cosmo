@@ -4,10 +4,8 @@ go 1.23
 
 toolchain go1.23.4
 
-replace github.com/hwcer/cosgo v1.1.0 => ../cosgo
-
 require (
-	github.com/hwcer/cosgo v1.1.0
+	github.com/hwcer/cosgo v0.0.0-20250327092041-fbd355218a28
 	go.mongodb.org/mongo-driver v1.17.2
 )
 
