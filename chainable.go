@@ -46,6 +46,14 @@ func (db *DB) Multiple() (tx *DB) {
 	return
 }
 
+// IncludeZeroValue 设置Update Updates 时包含零值
+// 使用 Save 时自动包含零值
+func (db *DB) IncludeZeroValue() (tx *DB) {
+	tx = db.getInstance()
+	tx.stmt.includeZeroValue = true
+	return
+}
+
 // Omit specify fields that you want to ignore when creating, updating and querying
 func (db *DB) Omit(columns ...string) (tx *DB) {
 	tx = db.getInstance()

@@ -102,13 +102,57 @@ func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 	return tx
 }
 
-// Find  get records that match given conditions
+// Query  get records that match given conditions
 // value must be a pointer to a slice
-func (db *DB) Find(val any, where ...any) (tx *DB) {
+func (db *DB) Query(val any, where ...any) (tx *DB) {
 	tx = db.getInstance()
 	if len(where) > 0 {
 		tx = db.Where(where[0], where[1:]...)
 	}
+	tx.stmt.value = val
+	return tx.callbacks.Query().Execute(tx)
+}
+
+// Find  仅仅满足 GORM习惯
+func (db *DB) Find(val any, where ...any) (tx *DB) {
+	return db.Query(val, where...)
+}
+
+// First  获取第一条记录（主键升序）
+func (db *DB) First(val any, where ...any) (tx *DB) {
+	tx = db.getInstance()
+	if len(where) > 0 {
+		tx = db.Where(where[0], where[1:]...)
+	}
+	tx.Limit(1)
+	if len(tx.stmt.orders) == 0 {
+		tx = tx.Order("_id", 1)
+	}
+	tx.stmt.value = val
+	return tx.callbacks.Query().Execute(tx)
+}
+
+// Last 获取最后一条记录（主键降序）
+func (db *DB) Last(val any, where ...any) (tx *DB) {
+	tx = db.getInstance()
+	if len(where) > 0 {
+		tx = db.Where(where[0], where[1:]...)
+	}
+	tx.Limit(1)
+	if len(tx.stmt.orders) == 0 {
+		tx = tx.Order("_id", 1)
+	}
+	tx.stmt.value = val
+	return tx.callbacks.Query().Execute(tx)
+}
+
+// Take  获取一条记录，没有指定排序字段
+func (db *DB) Take(val any, where ...any) (tx *DB) {
+	tx = db.getInstance()
+	if len(where) > 0 {
+		tx = db.Where(where[0], where[1:]...)
+	}
+	tx.Limit(1)
 	tx.stmt.value = val
 	return tx.callbacks.Query().Execute(tx)
 }
@@ -126,7 +170,7 @@ func (db *DB) Save(values any, conds ...any) (tx *DB) {
 		tx = tx.Where(conds[0], conds[1:]...)
 	}
 	tx.stmt.value = values
-	tx.stmt.saveZeroValue = true
+	tx.stmt.includeZeroValue = true
 	return tx.callbacks.Update().Execute(tx)
 }
 
@@ -144,6 +188,21 @@ func (db *DB) Update(values any, conds ...any) (tx *DB) {
 		tx = tx.Where(conds[0], conds[1:]...)
 	}
 	tx.stmt.value = values
+	return tx.callbacks.Update().Execute(tx)
+}
+
+// Updates 更新多列
+// Updates 方法支持 struct 和 map[string]interface{} 参数。当使用 struct 更新时，默认情况下只会更新非零值的字段
+// 如果您想要在更新时选择、忽略某些字段，您可以使用 Select、Omit
+// 自动关闭 updateAndModify
+func (db *DB) Updates(values any, conds ...any) (tx *DB) {
+	tx = db.getInstance()
+	if len(conds) > 0 {
+		tx = tx.Where(conds[0], conds[1:]...)
+	}
+	tx.stmt.value = values
+	tx.stmt.multiple = true
+	tx.stmt.updateAndModifyModel = false
 	return tx.callbacks.Update().Execute(tx)
 }
 

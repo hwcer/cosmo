@@ -40,7 +40,7 @@ func cmdUpdate(tx *DB) (err error) {
 	stmt := tx.stmt
 	var data update.Update
 	var upsert bool
-	if data, upsert, err = update.Build(stmt.value, stmt.schema, &stmt.selector, stmt.saveZeroValue); err != nil {
+	if data, upsert, err = update.Build(stmt.value, stmt.schema, &stmt.selector, stmt.includeZeroValue); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)
