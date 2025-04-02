@@ -26,7 +26,8 @@ func (this *BulkWrite) SetUpdateFilter(filter BulkWriteUpdateFilter) {
 	this.filter = filter
 }
 
-func (this *BulkWrite) Save() (err error) {
+// Submit 提交修改
+func (this *BulkWrite) Submit() (err error) {
 	if this.tx.stmt.Error != nil {
 		return this.tx.stmt.Error
 	}
@@ -48,14 +49,11 @@ func (this *BulkWrite) Save() (err error) {
 	err = tx.Error
 	return
 }
-
-// Update 更新
-// data   map[string]any  update.Update  bson.M
-func (this *BulkWrite) Update(data any, where ...interface{}) {
+func (this *BulkWrite) update(data any, where []any, includeZeroValue bool) {
 	stmt := this.tx.stmt
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	value, upsert, err := update.Build(data, stmt.schema, &stmt.selector)
+	value, upsert, err := update.Build(data, stmt.schema, &stmt.selector, includeZeroValue)
 	if err != nil {
 		_ = this.tx.Errorf(err)
 		return
@@ -70,6 +68,16 @@ func (this *BulkWrite) Update(data any, where ...interface{}) {
 		model.SetUpsert(true)
 	}
 	this.models = append(this.models, model)
+}
+
+func (this *BulkWrite) Save(data any, where ...any) {
+	this.update(data, where, true)
+}
+
+// Update 更新
+// data   map[string]any  update.Update  bson.M
+func (this *BulkWrite) Update(data any, where ...any) {
+	this.update(data, where, false)
 }
 
 func (this *BulkWrite) Insert(documents ...interface{}) {

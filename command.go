@@ -36,12 +36,11 @@ func cmdCreate(tx *DB) (err error) {
 
 // Update 通用更新
 // map ,BuildUpdate.m 支持 $set $incr $setOnInsert, 其他未使用$字段一律视为$set操作
-// 支持struct 保存所有非零值
 func cmdUpdate(tx *DB) (err error) {
 	stmt := tx.stmt
 	var data update.Update
 	var upsert bool
-	if data, upsert, err = update.Build(stmt.value, stmt.schema, &stmt.selector); err != nil {
+	if data, upsert, err = update.Build(stmt.value, stmt.schema, &stmt.selector, stmt.saveZeroValue); err != nil {
 		return
 	}
 	//fmt.Printf("update:%+v\n", update)

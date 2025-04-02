@@ -35,6 +35,7 @@ type Statement struct {
 	orders               []bson.E
 	upsert               bool //文档不存在时自动插入新文档
 	multiple             bool //强制批量更新
+	saveZeroValue        bool //保存零值
 	updateAndModifyModel bool //更新数据库成功时修改将最终结果写入到model
 }
 

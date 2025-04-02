@@ -120,6 +120,16 @@ func (db *DB) Create(value interface{}) (tx *DB) {
 	return tx.callbacks.Create().Execute(tx)
 }
 
+func (db *DB) Save(values any, conds ...any) (tx *DB) {
+	tx = db.getInstance()
+	if len(conds) > 0 {
+		tx = tx.Where(conds[0], conds[1:]...)
+	}
+	tx.stmt.value = values
+	tx.stmt.saveZeroValue = true
+	return tx.callbacks.Update().Execute(tx)
+}
+
 //Update 通用更新
 // values 类型为map ,bson.M 时支持 $set $inc $setOnInsert, 其他未使用$前缀字段一律视为$set操作
 // values 类型为struct保存所有非零值,如果需要将零值写入数据库，请使用map方式

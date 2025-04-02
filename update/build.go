@@ -19,7 +19,7 @@ type SetOnInsert interface {
 // Build 使用当前模型，将map bson.m Struct 转换成Update
 // 如果设置了model i为bson.m可以使用数据库名和model名
 // selects 针对Struct更新时选择，或者忽略的字段，如果为空，更新所有非零值字段
-func Build(i any, sch *schema.Schema, filter *Selector) (update Update, upsert bool, err error) {
+func Build(i any, sch *schema.Schema, filter *Selector, includeZeroValue bool) (update Update, upsert bool, err error) {
 	if sch == nil {
 		err = errors.New("schema is nil")
 		return
@@ -30,7 +30,7 @@ func Build(i any, sch *schema.Schema, filter *Selector) (update Update, upsert b
 	case reflect.Map:
 		update, err = parseMap(i, reflectValue, sch, filter)
 	case reflect.Struct:
-		update, err = parseStruct(i, reflectValue, sch, filter)
+		update, err = parseStruct(i, reflectValue, sch, filter, includeZeroValue)
 	default:
 		err = fmt.Errorf("类型错误:%v", reflectValue.Kind())
 	}
@@ -70,7 +70,7 @@ func parseMap(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, 
 	return update.Transform(sch), nil
 }
 
-func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector) (update Update, err error) {
+func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector, includeZeroValue bool) (update Update, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			logger.Error("%v", e)
@@ -83,8 +83,10 @@ func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schem
 			return true
 		}
 		v := reflectValue.FieldByIndex(field.Index)
-		if filter.Has(k) && v.IsValid() && !v.IsZero() {
-			update.Set(k, v.Interface())
+		if filter.Has(k) && v.IsValid() {
+			if includeZeroValue || !v.IsZero() {
+				update.Set(k, v.Interface())
+			}
 		}
 		return true
 	})
