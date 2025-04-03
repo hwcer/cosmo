@@ -26,6 +26,11 @@ func (this *BulkWrite) SetUpdateFilter(filter BulkWriteUpdateFilter) {
 	this.filter = filter
 }
 
+// Size 等待提交的事务数量
+func (this *BulkWrite) Size() int {
+	return len(this.models)
+}
+
 // Submit 提交修改
 func (this *BulkWrite) Submit() (err error) {
 	if this.tx.stmt.Error != nil {
