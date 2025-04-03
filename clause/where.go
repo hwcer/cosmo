@@ -164,8 +164,24 @@ func parseWherePair(pair string, w string, v interface{}) *Node {
 	r = strings.Trim(arr[1], sqlConditionSplit)
 	if r == "?" {
 		r = v
+	} else {
+		r = formatWhereValue(r)
 	}
+
 	node.v = r
 	//fmt.Printf("parseWherePair node: %+v \n", node)
 	return node
+}
+
+func formatWhereValue(v any) any {
+	s, ok := v.(string)
+	if !ok {
+		return v
+	}
+	for t, f := range formatWhereTypes {
+		if strings.HasPrefix(s, t) {
+			return f(t, s)
+		}
+	}
+	return v
 }
