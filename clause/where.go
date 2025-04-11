@@ -1,7 +1,7 @@
 package clause
 
 import (
-	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"strings"
 )

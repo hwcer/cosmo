@@ -1,7 +1,7 @@
 package cosmo
 
 import (
-	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/logger"
 	"sort"
 	"sync"
 	"time"
