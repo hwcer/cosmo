@@ -166,7 +166,7 @@ func cmdQuery(tx *DB) (err error) {
 		}
 		switch v := tx.stmt.value.(type) {
 		case *[]byte:
-			*v, err = result.DecodeBytes()
+			*v, err = result.Raw()
 		default:
 			err = result.Decode(tx.stmt.value)
 		}
