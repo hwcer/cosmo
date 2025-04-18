@@ -96,7 +96,7 @@ func (this *Cache) Cursor(update int64, filter CacheFilter) []any {
 			cursor = append(cursor, v)
 		}
 		sort.Slice(cursor, func(i, j int) bool {
-			return cursor[i].GetUpdate() < cursor[j].GetUpdate()
+			return cursor[i].GetUpdate() > cursor[j].GetUpdate()
 		})
 		this.cursor = cursor
 	} else {
