@@ -102,6 +102,58 @@ func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 	return tx
 }
 
+type Cursor interface {
+	Decode(val interface{}) error
+}
+
+// Range 遍历
+func (db *DB) Range(f func(Cursor) bool) (tx *DB) {
+	tx = db.getInstance()
+	stmt := tx.stmt
+
+	if tx = tx.stmt.Parse(); tx.Error != nil {
+		return
+	}
+	if stmt.table == "" {
+		_ = tx.Errorf("table not set, please set it like: db.model(&user) or db.table(\"users\") %+v")
+		return
+	}
+
+	coll := tx.client.Database(tx.dbname).Collection(stmt.table)
+	filter := tx.stmt.Clause.Build(stmt.schema)
+	//find
+	opts := options.Find()
+	if stmt.Paging.Size > 0 {
+		opts.SetLimit(int64(tx.stmt.Paging.Size))
+	}
+	if offset := stmt.Paging.Offset(); offset > 0 {
+		opts.SetSkip(int64(offset))
+	}
+	if order := stmt.Order(); len(order) > 0 {
+		opts.SetSort(order)
+	}
+	if projection := tx.stmt.selector.Projection(stmt.schema); len(projection) > 0 {
+		opts.SetProjection(projection)
+	}
+	var cursor *mongo.Cursor
+	if cursor, tx.Error = coll.Find(stmt.Context, filter, opts); tx.Error != nil {
+		return
+	}
+	defer cursor.Close(stmt.Context)
+
+	for cursor.Next(stmt.Context) {
+		if !f(cursor) {
+			break
+		}
+	}
+
+	if err := cursor.Err(); err != nil {
+		db.Error = err
+	}
+
+	return tx
+}
+
 // Query  get records that match given conditions
 // value must be a pointer to a slice
 func (db *DB) Query(val any, where ...any) (tx *DB) {
