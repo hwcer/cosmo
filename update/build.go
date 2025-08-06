@@ -2,10 +2,12 @@ package update
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
+	"github.com/hwcer/cosmo/utils"
 	"github.com/hwcer/logger"
-	"reflect"
 )
 
 const MongodbFieldSplit = "."
@@ -25,13 +27,13 @@ type iStmt interface {
 // Build 使用当前模型，将map bson.m Struct 转换成Update
 // 如果设置了model i为bson.m可以使用数据库名和model名
 // selects 针对Struct更新时选择，或者忽略的字段，如果为空，更新所有非零值字段
-func Build(stmt iStmt) (update Update, upsert bool, err error) {
-	reflectValue := reflect.Indirect(stmt.GetReflectValue())
+func Build(i any, sch *schema.Schema, filter *Selector, includeZeroValue bool) (update Update, upsert bool, err error) {
+	reflectValue := reflect.Indirect(utils.ValueOf(i))
 	switch reflectValue.Kind() {
 	case reflect.Map:
-		update, err = parseMap(stmt)
+		update, err = parseMap(i, sch)
 	case reflect.Struct:
-		update, err = parseStruct(stmt)
+		update, err = parseStruct(i, reflectValue, sch, filter, includeZeroValue)
 	default:
 		err = fmt.Errorf("类型错误:%v", reflectValue.Kind())
 	}
@@ -51,10 +53,14 @@ func Build(stmt iStmt) (update Update, upsert bool, err error) {
 	return
 }
 
+func BuildWithStmt(stmt iStmt) (update Update, upsert bool, err error) {
+	return Build(stmt.GetValue(), stmt.GetSchema(), stmt.GetSelector(), stmt.GetIncludeZeroValue())
+}
+
 // parseMap 使用Map修改数据 map,bson.M 被视为使用 $set 操作
 // 高级提交需要使用 Update
-func parseMap(stmt iStmt) (update Update, err error) {
-	switch v := stmt.GetValue().(type) {
+func parseMap(desc interface{}, sch *schema.Schema) (update Update, err error) {
+	switch v := desc.(type) {
 	case Update:
 		update = v
 	case *Update:
@@ -68,24 +74,19 @@ func parseMap(stmt iStmt) (update Update, err error) {
 	if err != nil {
 		return
 	}
-	if sch := stmt.GetSchema(); sch != nil {
+	if sch != nil {
 		return update.Transform(sch), nil
 	} else {
 		return update, nil
 	}
 }
 
-func parseStruct(stmt iStmt) (update Update, err error) {
+func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector, includeZeroValue bool) (update Update, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			logger.Error("%v", e)
 		}
 	}()
-	desc := stmt.GetValue()
-	filter := stmt.GetSelector()
-	reflectValue := reflect.Indirect(stmt.GetReflectValue())
-	includeZeroValue := stmt.GetIncludeZeroValue()
-	sch := stmt.GetSchema()
 	if sch == nil {
 		if sch, err = schema.Parse(desc); err != nil {
 			return

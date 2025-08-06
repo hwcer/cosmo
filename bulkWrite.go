@@ -2,6 +2,7 @@ package cosmo
 
 import (
 	"context"
+
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -58,7 +59,7 @@ func (this *BulkWrite) update(data any, where []any, includeZeroValue bool) {
 	stmt := this.tx.stmt
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	value, upsert, err := update.Build(stmt)
+	value, upsert, err := update.Build(data, stmt.GetSchema(), stmt.GetSelector(), includeZeroValue)
 	if err != nil {
 		_ = this.tx.Errorf(err)
 		return

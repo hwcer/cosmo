@@ -41,7 +41,7 @@ func cmdUpdate(tx *DB) (err error) {
 	stmt := tx.stmt
 	var data update.Update
 	var upsert bool
-	if data, upsert, err = update.Build(stmt); err != nil {
+	if data, upsert, err = update.BuildWithStmt(stmt); err != nil {
 		return
 	}
 	filter := stmt.Clause.Build(stmt.schema)
