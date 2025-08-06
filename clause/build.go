@@ -8,6 +8,10 @@ func (q *Query) Build(model *schema.Schema) Filter {
 	if q.filter != nil {
 		filter.Merge(q.filter)
 	}
+	if len(q.where) == 0 {
+		return filter
+	}
+
 	for _, node := range q.where {
 		build(model, filter, node)
 	}
@@ -18,6 +22,7 @@ func (q *Query) Build(model *schema.Schema) Filter {
 			filter.Match(t, v)
 		}
 	}
+	q.filter = filter
 	return filter
 }
 

@@ -1,5 +1,7 @@
 package cosmo
 
+import "reflect"
+
 func initializeCallbacks() *callbacks {
 	cb := &callbacks{processors: make(map[string]*processor)}
 	cb.processors["query"] = &processor{handle: cmdQuery}
@@ -78,6 +80,10 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 		tx.Errorf(err)
 		return
 	}
+	//清理val
+	stmt.value = nil
+	stmt.reflectValue = reflect.Value{}
+
 	//fmt.Printf("Execute:%v,%+v\n", stmt.reflectValue.Kind(), stmt.reflectValue.Interface())
 	return
 }

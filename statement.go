@@ -25,15 +25,15 @@ type Statement struct {
 	model                any
 	value                any
 	table                string
-	selector             update.Selector
-	reflectValue         reflect.Value
-	Context              context.Context
 	Clause               *clause.Query
 	Paging               *Paging
+	Context              context.Context
 	schema               *schema.Schema
 	orders               []bson.E
-	upsert               bool //文档不存在时自动插入新文档
-	multiple             bool //强制批量更新
+	upsert               bool            //文档不存在时自动插入新文档
+	selector             update.Selector //update 字段选择器
+	multiple             bool            //强制批量更新
+	reflectValue         reflect.Value
 	includeZeroValue     bool //update时包含零值
 	updateAndModifyModel bool //更新数据库成功时修改将最终结果写入到model
 }
@@ -57,19 +57,17 @@ func (stmt *Statement) Parse() (tx *DB) {
 			return tx.Errorf(ErrInvalidValue)
 		}
 	}
-
-	if stmt.model == nil && reflect.Indirect(stmt.reflectValue).Kind() == reflect.Struct {
-		stmt.model = stmt.value
-	}
-	//var sch *schema.Schema
-	if stmt.model != nil {
-		stmt.schema, tx.Error = schema.Parse(stmt.model)
-	} else {
-		stmt.schema, _ = schema.Parse(stmt.value)
-	}
-
-	if tx.Error != nil {
-		return
+	// schema
+	if stmt.schema == nil {
+		if stmt.model != nil {
+			stmt.schema, tx.Error = schema.Parse(stmt.model)
+		} else if stmt.table == "" {
+			// table 为空时尝试通过value解析
+			stmt.schema, _ = schema.Parse(stmt.value)
+		}
+		if tx.Error != nil {
+			return
+		}
 	}
 
 	if stmt.table == "" {
