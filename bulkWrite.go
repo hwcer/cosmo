@@ -58,7 +58,7 @@ func (this *BulkWrite) update(data any, where []any, includeZeroValue bool) {
 	stmt := this.tx.stmt
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
-	value, upsert, err := update.Build(data, stmt.schema, &stmt.selector, includeZeroValue)
+	value, upsert, err := update.Build(stmt)
 	if err != nil {
 		_ = this.tx.Errorf(err)
 		return

@@ -16,7 +16,6 @@ func NewStatement(db *DB) *Statement {
 		Context: context.Background(),
 		Clause:  clause.New(),
 		Paging:  &Paging{},
-		//settings: map[string]interface{}{},
 	}
 }
 
@@ -59,22 +58,27 @@ func (stmt *Statement) Parse() (tx *DB) {
 		}
 	}
 
+	if stmt.model == nil && reflect.Indirect(stmt.reflectValue).Kind() == reflect.Struct {
+		stmt.model = stmt.value
+	}
 	//var sch *schema.Schema
 	if stmt.model != nil {
 		stmt.schema, tx.Error = schema.Parse(stmt.model)
 	} else {
-		stmt.schema, tx.Error = schema.Parse(stmt.reflectValue)
+		stmt.schema, _ = schema.Parse(stmt.value)
 	}
+
 	if tx.Error != nil {
 		return
 	}
-	if stmt.schema == nil {
-		return tx.Errorf("schema is nil")
-	}
-	if stmt.table == "" {
-		stmt.table = stmt.schema.Table
-	}
 
+	if stmt.table == "" {
+		if stmt.schema != nil {
+			stmt.table = stmt.schema.Table
+		} else {
+			return tx.Errorf("database table name is nil")
+		}
+	}
 	return
 }
 
@@ -84,7 +88,7 @@ func (stmt *Statement) DBName(name string) string {
 		return name
 	}
 	if field := stmt.schema.LookUpField(name); field != nil {
-		return field.DBName
+		return field.DBName()
 	}
 	return name
 }
@@ -98,6 +102,19 @@ func (stmt *Statement) Order() (order bson.D) {
 	return
 }
 
-func (stmt *Statement) Schema() *schema.Schema {
+func (stmt *Statement) GetValue() any {
+	return stmt.value
+}
+func (stmt *Statement) GetSchema() *schema.Schema {
 	return stmt.schema
+}
+func (stmt *Statement) GetSelector() *update.Selector {
+	return &stmt.selector
+}
+func (stmt *Statement) GetReflectValue() reflect.Value {
+	return stmt.reflectValue
+}
+
+func (stmt *Statement) GetIncludeZeroValue() bool {
+	return stmt.includeZeroValue
 }

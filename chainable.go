@@ -33,6 +33,7 @@ func (db *DB) Table(name string) (tx *DB) {
 }
 
 // Upsert update时如果不存在自动insert
+// update 存在 $setOnInsert 时同样自动设置Upsert
 func (db *DB) Upsert() (tx *DB) {
 	tx = db.getInstance()
 	tx.stmt.upsert = true
@@ -43,6 +44,13 @@ func (db *DB) Upsert() (tx *DB) {
 func (db *DB) Multiple() (tx *DB) {
 	tx = db.getInstance()
 	tx.stmt.multiple = true
+	return
+}
+
+// UpdateAndModify 更新单行数据(update,save)时同时更新model
+func (db *DB) UpdateAndModify() (tx *DB) {
+	tx = db.getInstance()
+	tx.stmt.updateAndModifyModel = true
 	return
 }
 
@@ -121,7 +129,7 @@ func (db *DB) SetColumn(data map[string]interface{}) (err error) {
 	//logger.Debug("reflectModel:%+v", reflectModel.Interface())
 	for k, v := range data {
 		field := sch.LookUpField(k)
-		if field != nil && field.DBName != clause.MongoPrimaryName {
+		if field != nil && field.DBName() != clause.MongoPrimaryName {
 			if err = field.Set(reflectValue, v); err != nil {
 				return err
 			}

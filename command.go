@@ -40,18 +40,14 @@ func cmdUpdate(tx *DB) (err error) {
 	stmt := tx.stmt
 	var data update.Update
 	var upsert bool
-	if data, upsert, err = update.Build(stmt.value, stmt.schema, &stmt.selector, stmt.includeZeroValue); err != nil {
+	if data, upsert, err = update.Build(stmt); err != nil {
 		return
 	}
-	//fmt.Printf("update:%+v\n", update)
 	filter := stmt.Clause.Build(stmt.schema)
-	//filter := tx.stmt.Clause.Build(tx.stmt.schema)
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
-	//fmt.Printf("Update filter:%+v\n", filter)
 	coll := tx.client.Database(tx.dbname).Collection(stmt.table)
-	//reflectModel := reflect.Indirect(reflect.ValueOf(tx.stmt.model))
 	if stmt.multiple {
 		opts := options.Update()
 		var result *mongo.UpdateResult

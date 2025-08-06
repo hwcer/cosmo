@@ -54,8 +54,9 @@ func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 
 	if paging.Update > 0 {
 		if f := stmt.schema.LookUpField(DBNameUpdate); f != nil {
-			tx.Order(f.DBName, -1)
-			tx.Where(fmt.Sprintf("%v > ?", f.DBName), paging.Update)
+			dbName := f.DBName()
+			tx.Order(dbName, -1)
+			tx.Where(fmt.Sprintf("%s > ?", dbName), paging.Update)
 		}
 	}
 	//defer tx.reset()
@@ -259,14 +260,12 @@ func (db *DB) Updates(values any, conds ...any) (tx *DB) {
 }
 
 // Delete 删除记录
-// db.delete(&User{Id:1,name:"myname"})  匹配 _id=1
 // db.model(&User).delete(1) 匹配 _id=1
 // db.model(&User).delete([]int{1,2,3}) 匹配 _id IN (1,2,3)
 // db.model(&User).delete("name = ?","myname") 匹配 name=myname
 func (db *DB) Delete(conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
-		tx.stmt.value = conds[0]
 		db.Where(conds[0], conds[1:]...)
 	}
 	return tx.callbacks.Delete().Execute(tx)
@@ -278,7 +277,6 @@ func (db *DB) Count(count interface{}, conds ...interface{}) (tx *DB) {
 	if len(conds) > 0 {
 		tx = tx.Where(conds[0], conds[1:]...)
 	}
-
 	tx.stmt.value = count
 	return tx.stmt.callbacks.Call(tx, func(db *DB) (err error) {
 		var val int64

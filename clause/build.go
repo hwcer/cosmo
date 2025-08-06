@@ -25,7 +25,7 @@ func build(model *schema.Schema, filter Filter, node *Node) {
 	k := node.k
 	if model != nil {
 		if filed := model.LookUpField(node.k); filed != nil {
-			k = filed.DBName
+			k = filed.DBName()
 		}
 	}
 	if node.t == QueryOperationPrefix {
