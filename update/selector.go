@@ -73,10 +73,13 @@ func (this *Selector) Projection(sch *schema.Schema) map[string]bool {
 	}
 	r := map[string]bool{}
 	for k, v := range this.projection {
-		if field := sch.LookUpField(k); field != nil {
-			db := field.DBName()
-			r[db] = v
+		db := k
+		if sch != nil {
+			if field := sch.LookUpField(k); field != nil {
+				db = field.DBName()
+			}
 		}
+		r[db] = v
 	}
 
 	return r
