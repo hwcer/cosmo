@@ -16,11 +16,17 @@ import (
 // PoolManager 连接池管理器
 type PoolManager struct {
 	client       *mongo.Client
+	originalURI  string // 保存原始连接地址
 	config       PoolConfig
 	isChecking   atomic.Bool
 	isRecovering atomic.Bool
 	//shutdown     chan struct{}
 	metrics *Metrics
+
+	// 健康状态缓存
+	lastHealthy   atomic.Bool   // 上次检查的健康状态
+	lastCheckTime atomic.Value  // 上次检查的时间
+	cacheDuration time.Duration // 缓存持续时间
 }
 
 // PoolConfig 连接池配置
@@ -51,7 +57,7 @@ type HealthStatus struct {
 }
 
 // NewPoolManager 创建连接池管理器
-func NewPoolManager(client *mongo.Client, config PoolConfig) *PoolManager {
+func NewPoolManager(uri string, config PoolConfig) *PoolManager {
 	if config.CheckInterval == 0 {
 		config.CheckInterval = 30 * time.Second
 	}
@@ -68,11 +74,22 @@ func NewPoolManager(client *mongo.Client, config PoolConfig) *PoolManager {
 		config.HealthyThreshold = 3
 	}
 
+	// 使用NewClient创建客户端
+	client, err := NewClient(uri)
+	if err != nil {
+		panic(fmt.Sprintf("创建MongoDB客户端失败: %v", err))
+	}
+
+	// 设置默认缓存持续时间为10秒
+	cacheDuration := 10 * time.Second
+
 	return &PoolManager{
-		client: client,
-		config: config,
-		//shutdown: make(chan struct{}),
-		metrics: &Metrics{},
+		client:      client,
+		originalURI: uri, // 保存原始连接地址
+		config:      config,
+		//shutdown:     make(chan struct{}),
+		metrics:       &Metrics{},
+		cacheDuration: cacheDuration,
 	}
 }
 
@@ -139,37 +156,44 @@ func (m *PoolManager) performHealthCheck() HealthStatus {
 	err := m.client.Ping(ctx, nil)
 	latency := time.Since(start)
 
+	var status HealthStatus
 	if err != nil {
-		return HealthStatus{
+		status = HealthStatus{
 			IsHealthy: false,
 			Latency:   latency,
 			Error:     fmt.Errorf("ping失败: %w", err),
 			Timestamp: time.Now(),
 		}
-	}
+	} else {
+		// 2. 执行简单查询测试
+		testStart := time.Now()
+		db := m.client.Database("admin")
+		var result bson.M
+		err = db.RunCommand(ctx, bson.D{{"ping", 1}}).Decode(&result)
+		testLatency := time.Since(testStart)
 
-	// 2. 执行简单查询测试
-	testStart := time.Now()
-	db := m.client.Database("admin")
-	var result bson.M
-	err = db.RunCommand(ctx, bson.D{{"ping", 1}}).Decode(&result)
-	testLatency := time.Since(testStart)
-
-	if err != nil {
-		return HealthStatus{
-			IsHealthy: false,
-			Latency:   latency + testLatency,
-			Error:     fmt.Errorf("查询测试失败: %w", err),
-			Timestamp: time.Now(),
+		if err != nil {
+			status = HealthStatus{
+				IsHealthy: false,
+				Latency:   latency + testLatency,
+				Error:     fmt.Errorf("查询测试失败: %w", err),
+				Timestamp: time.Now(),
+			}
+		} else {
+			status = HealthStatus{
+				IsHealthy: true,
+				Latency:   latency + testLatency,
+				Error:     nil,
+				Timestamp: time.Now(),
+			}
 		}
 	}
 
-	return HealthStatus{
-		IsHealthy: true,
-		Latency:   latency + testLatency,
-		Error:     nil,
-		Timestamp: time.Now(),
-	}
+	// 更新健康状态缓存
+	m.lastHealthy.Store(status.IsHealthy)
+	m.lastCheckTime.Store(status.Timestamp)
+
+	return status
 }
 
 // tryRecover 尝试恢复连接
@@ -255,8 +279,8 @@ func (m *PoolManager) reconnectWithCleanup() (bool, error) {
 func (m *PoolManager) fullReconnect() (bool, error) {
 	fmt.Println("尝试完整重新连接...")
 
-	// 保存原始URI
-	originalURI := m.client.GetURI()
+	// 使用保存的原始URI
+	originalURI := m.originalURI
 
 	// 完全断开
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -307,9 +331,35 @@ func (m *PoolManager) fullReconnect() (bool, error) {
 func (m *PoolManager) createNewClient() (bool, error) {
 	fmt.Println("尝试创建全新客户端...")
 
-	// 这需要外部传入配置信息
-	// 在实际使用中，需要保存原始配置
-	return false, fmt.Errorf("需要原始配置信息")
+	// 使用保存的原始URI创建新客户端
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	newClient, err := NewClient(m.originalURI)
+	if err != nil {
+		return false, fmt.Errorf("创建新客户端失败: %w", err)
+	}
+
+	// 验证新客户端
+	err = newClient.Ping(ctx, nil)
+	if err != nil {
+		newClient.Disconnect(ctx)
+		return false, fmt.Errorf("新客户端验证失败: %w", err)
+	}
+
+	// 替换旧客户端
+	oldClient := m.client
+	m.client = newClient
+
+	// 异步关闭旧客户端
+	go func() {
+		time.Sleep(5 * time.Second)
+		oldCtx, oldCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer oldCancel()
+		oldClient.Disconnect(oldCtx)
+	}()
+
+	return true, nil
 }
 
 // CheckNow 立即执行健康检查
@@ -319,13 +369,26 @@ func (m *PoolManager) CheckNow() HealthStatus {
 
 // IsHealthy 检查当前是否健康
 func (m *PoolManager) IsHealthy() bool {
-	// 如果最近有检查，使用缓存结果
-	// 否则执行快速检查
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// 检查缓存是否有效
+	if lastCheck, ok := m.lastCheckTime.Load().(time.Time); ok {
+		if time.Since(lastCheck) < m.cacheDuration {
+			// 缓存有效，使用缓存结果
+			return m.lastHealthy.Load()
+		}
+	}
+
+	// 缓存过期或无缓存，执行快速检查
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) // 减少超时时间，提高响应速度
 	defer cancel()
 
 	err := m.client.Ping(ctx, nil)
-	return err == nil
+	isHealthy := err == nil
+
+	// 更新缓存
+	m.lastHealthy.Store(isHealthy)
+	m.lastCheckTime.Store(time.Now())
+
+	return isHealthy
 }
 
 // GetMetrics 获取监控指标
