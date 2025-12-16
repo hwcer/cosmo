@@ -2,11 +2,12 @@ package cosmo
 
 import (
 	"context"
+	"strings"
+	"time"
+
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"strings"
-	"time"
 )
 
 const (
@@ -47,14 +48,36 @@ func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Cl
 		address = "mongodb://" + address
 	}
 	c := options.Client().ApplyURI(address)
-	c.SetSocketTimeout(time.Second * 5)
-	c.SetConnectTimeout(time.Second * 10)
-	c.SetServerSelectionTimeout(time.Second * 10)
+
+	// 连接池配置
+	c.SetMinPoolSize(20)                  // 最小连接池大小，确保基础并发能力
+	c.SetMaxPoolSize(500)                 // 最大连接池大小，根据服务器资源和并发需求调整
+	c.SetMaxConnIdleTime(5 * time.Minute) // 连接最大空闲时间，避免资源浪费
+
+	// 超时配置
+	c.SetConnectTimeout(10 * time.Second)         // 连接超时时间
+	c.SetSocketTimeout(30 * time.Second)          // 套接字超时时间，处理复杂查询
+	c.SetServerSelectionTimeout(15 * time.Second) // 服务器选择超时时间
+	c.SetHeartbeatInterval(5 * time.Second)       // 心跳检测间隔，快速发现节点变化
+
+	// 重试机制
+	c.SetRetryWrites(true) // 启用写操作重试
+	c.SetRetryReads(true)  // 启用读操作重试
+	// 注意：SetRetryAttempts和SetRetryInterval方法在当前驱动版本中不可用
+	// 如需配置重试策略，请使用对应的重试选项结构体
+
+	// 读取偏好 - 根据业务需求选择
+	// 生产环境建议使用secondaryPreferred分散读负载
+	c.SetReadPreference(readpref.SecondaryPreferred())
+
+	// 连接模式
+	c.SetDirect(false) // 启用负载均衡模式，适用于副本集或分片集群
+
 	client, err = mongo.Connect(context.Background(), append([]*options.ClientOptions{c}, opts...)...)
 	if err != nil {
 		return
 	}
-	if err = client.Ping(context.Background(), readpref.Primary()); err != nil {
+	if err = client.Ping(context.Background(), nil); err != nil {
 		return
 	}
 	return
