@@ -1,6 +1,10 @@
 package cosmo
 
-import "reflect"
+import (
+	"reflect"
+
+	"go.mongodb.org/mongo-driver/mongo"
+)
 
 func initializeCallbacks() *callbacks {
 	cb := &callbacks{processors: make(map[string]*processor)}
@@ -76,7 +80,11 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 		return
 	}
 	//defer tx.reset()
-	if err := p.handle(tx); err != nil {
+	// 使用PoolManager.Execute获取client并传递给handle
+	err := tx.pool.Execute(stmt.Context, func(client *mongo.Client) error {
+		return p.handle(tx, client)
+	})
+	if err != nil {
 		tx.Errorf(err)
 		return
 	}

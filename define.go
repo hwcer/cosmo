@@ -1,5 +1,7 @@
 package cosmo
 
+import "go.mongodb.org/mongo-driver/mongo"
+
 const DBNameUpdate = "update"
 
 // Plugin GORM plugin interface
@@ -8,4 +10,4 @@ const DBNameUpdate = "update"
 //	Initialize(*DB) error
 //}
 
-type executeHandle func(db *DB) error
+type executeHandle func(db *DB, client *mongo.Client) error

@@ -1,12 +1,8 @@
 package cosmo
 
 import (
-	"fmt"
 	"github.com/hwcer/cosmo/update"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"reflect"
 )
 
 const DefaultPageSize = 1000
@@ -24,82 +20,15 @@ func (db *DB) Inc(key string, val int) (tx *DB) {
 
 // Page 分页查询
 func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
-	//var err error
-	db.stmt.Paging = paging
-	paging.Init(DefaultPageSize)
-	if paging.Rows == nil {
-		paging.Rows = []bson.M{}
-	}
+	// 先获取新实例
 	tx = db.getInstance()
-	stmt := tx.stmt
-	reflectRows := reflect.ValueOf(paging.Rows)
-	indirectRows := reflect.Indirect(reflectRows)
-	if indirectRows.Kind() != reflect.Array && indirectRows.Kind() != reflect.Slice {
-		_ = tx.Errorf("paging.Rows type not Array or Slice")
-		return
-	}
+	// 对新实例进行修改
+	tx.stmt.Paging = paging
 	if len(where) > 0 {
 		tx = tx.Where(where[0], where[1:]...)
 	}
-	stmt.value = paging.Rows
-
-	if tx = tx.stmt.Parse(); tx.Error != nil {
-		return
-	}
-
-	if stmt.table == "" {
-		_ = tx.Errorf("table not set, please set it like: db.model(&user) or db.table(\"users\") %+v")
-		return
-	}
-
-	if paging.Update > 0 {
-		if f := stmt.schema.LookUpField(DBNameUpdate); f != nil {
-			dbName := f.DBName()
-			tx.Order(dbName, -1)
-			tx.Where(fmt.Sprintf("%s > ?", dbName), paging.Update)
-		}
-	}
-	//defer tx.reset()
-
-	coll := tx.client.Database(tx.dbname).Collection(stmt.table)
-	filter := tx.stmt.Clause.Build(stmt.schema)
-
-	if paging.Record == 0 && tx.Error == nil {
-		var val int64
-		if val, tx.Error = coll.CountDocuments(stmt.Context, filter); tx.Error == nil {
-			paging.Result(int(val))
-		} else {
-			return
-		}
-	}
-	//find
-	order := tx.stmt.Order()
-	opts := options.Find()
-	if stmt.Paging.Size > 0 {
-		opts.SetLimit(int64(tx.stmt.Paging.Size))
-	}
-	if offset := stmt.Paging.Offset(); offset > 0 {
-		opts.SetSkip(int64(offset))
-	}
-	if len(order) > 0 {
-		opts.SetSort(order)
-	}
-	if projection := tx.stmt.selector.Projection(stmt.schema); len(projection) > 0 {
-		opts.SetProjection(projection)
-	}
-	var cursor *mongo.Cursor
-	if cursor, tx.Error = coll.Find(stmt.Context, filter, opts); tx.Error != nil {
-		return
-	}
-	//cursor.RemainingBatchLength()
-	if reflectRows.Kind() == reflect.Ptr {
-		tx.Error = cursor.All(stmt.Context, paging.Rows)
-	} else {
-		tx.Error = cursor.All(stmt.Context, &paging.Rows)
-	}
-	if tx.Error == nil {
-		tx.RowsAffected = int64(indirectRows.Len())
-	}
+	// 使用回调机制执行cmdPage命令
+	tx = tx.callbacks.Call(tx, cmdPage)
 	return tx
 }
 
@@ -109,47 +38,28 @@ type Cursor interface {
 
 // Range 遍历
 func (db *DB) Range(f func(Cursor) bool) (tx *DB) {
+	// 先获取新实例
 	tx = db.getInstance()
-	stmt := tx.stmt
+	// 使用回调机制执行cmdRange命令
+	tx = tx.callbacks.Call(tx, cmdRange)
+	if tx.Error != nil {
+		return tx
+	}
+	// 从stmt的value字段中获取cursor
+	cursor, ok := tx.stmt.value.(*mongo.Cursor)
+	if !ok || cursor == nil {
+		return tx
+	}
+	defer cursor.Close(tx.stmt.Context)
 
-	if tx = tx.stmt.Parse(); tx.Error != nil {
-		return
-	}
-	if stmt.table == "" {
-		_ = tx.Errorf("table not set, please set it like: db.model(&user) or db.table(\"users\") %+v")
-		return
-	}
-
-	coll := tx.client.Database(tx.dbname).Collection(stmt.table)
-	filter := tx.stmt.Clause.Build(stmt.schema)
-	//find
-	opts := options.Find()
-	if stmt.Paging.Size > 0 {
-		opts.SetLimit(int64(tx.stmt.Paging.Size))
-	}
-	if offset := stmt.Paging.Offset(); offset > 0 {
-		opts.SetSkip(int64(offset))
-	}
-	if order := stmt.Order(); len(order) > 0 {
-		opts.SetSort(order)
-	}
-	if projection := tx.stmt.selector.Projection(stmt.schema); len(projection) > 0 {
-		opts.SetProjection(projection)
-	}
-	var cursor *mongo.Cursor
-	if cursor, tx.Error = coll.Find(stmt.Context, filter, opts); tx.Error != nil {
-		return
-	}
-	defer cursor.Close(stmt.Context)
-
-	for cursor.Next(stmt.Context) {
+	for cursor.Next(tx.stmt.Context) {
 		if !f(cursor) {
 			break
 		}
 	}
 
 	if err := cursor.Err(); err != nil {
-		db.Error = err
+		tx.Error = err
 	}
 
 	return tx
@@ -278,9 +188,9 @@ func (db *DB) Count(count interface{}, conds ...interface{}) (tx *DB) {
 		tx = tx.Where(conds[0], conds[1:]...)
 	}
 	tx.stmt.value = count
-	return tx.stmt.callbacks.Call(tx, func(db *DB) (err error) {
+	return tx.stmt.callbacks.Call(tx, func(db *DB, client *mongo.Client) (err error) {
 		var val int64
-		coll := tx.client.Database(tx.dbname).Collection(tx.stmt.table)
+		coll := client.Database(tx.dbname).Collection(tx.stmt.table)
 		filter := tx.stmt.Clause.Build(db.stmt.schema)
 		if val, err = coll.CountDocuments(tx.stmt.Context, filter); err == nil {
 			tx.stmt.reflectValue.SetInt(val)

@@ -18,6 +18,7 @@ type PoolManager struct {
 	client       *mongo.Client
 	originalURI  string // 保存原始连接地址
 	config       PoolConfig
+	isStarted    atomic.Bool // 防止重复启动健康检查
 	isChecking   atomic.Bool
 	isRecovering atomic.Bool
 	failureCount atomic.Int32 // 连续失败计数，用于指数退避
@@ -78,7 +79,7 @@ type HealthStatus struct {
 }
 
 // NewPoolManager 创建连接池管理器
-func NewPoolManager(uri string, config PoolConfig) *PoolManager {
+func NewPoolManager(uri string, config PoolConfig, client ...*mongo.Client) *PoolManager {
 	// 使用默认配置作为基础
 	defaultConfig := DefaultPoolConfig()
 
@@ -120,14 +121,21 @@ func NewPoolManager(uri string, config PoolConfig) *PoolManager {
 		config.RecoveryQueryTimeout = defaultConfig.RecoveryQueryTimeout
 	}
 
-	// 使用NewClient创建客户端
-	client, err := NewClient(uri)
-	if err != nil {
-		panic(fmt.Sprintf("创建MongoDB客户端失败: %v", err))
+	// 如果提供了client，则使用它；否则，创建一个新的
+	var dbClient *mongo.Client
+	var err error
+	if len(client) > 0 && client[0] != nil {
+		dbClient = client[0]
+	} else {
+		// 使用NewClient创建客户端
+		dbClient, err = NewClient(uri)
+		if err != nil {
+			panic(fmt.Sprintf("创建MongoDB客户端失败: %v", err))
+		}
 	}
 
 	return &PoolManager{
-		client:      client,
+		client:      dbClient,
 		originalURI: uri, // 保存原始连接地址
 		config:      config,
 
@@ -137,6 +145,10 @@ func NewPoolManager(uri string, config PoolConfig) *PoolManager {
 
 // Start 启动健康检查
 func (m *PoolManager) Start() {
+	// 检查是否已经启动，如果已经启动则直接返回
+	if m.isStarted.Swap(true) {
+		return
+	}
 	scc.CGO(m.healthCheckLoop)
 	logger.Debug("连接池健康检查已启动")
 }

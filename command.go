@@ -2,17 +2,19 @@ package cosmo
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Create insert the value into dbname
-func cmdCreate(tx *DB) (err error) {
-	coll := tx.client.Database(tx.dbname).Collection(tx.stmt.table)
+func cmdCreate(tx *DB, client *mongo.Client) (err error) {
+	coll := client.Database(tx.dbname).Collection(tx.stmt.table)
 	switch tx.stmt.reflectValue.Kind() {
 	case reflect.Map, reflect.Struct:
 		opts := options.InsertOne()
@@ -32,12 +34,113 @@ func cmdCreate(tx *DB) (err error) {
 	default:
 		panic("unhandled default case")
 	}
+
+	return
+}
+
+// cmdRange 遍历查询
+func cmdRange(tx *DB, client *mongo.Client) (err error) {
+	stmt := tx.stmt
+
+	coll := client.Database(tx.dbname).Collection(stmt.table)
+	filter := stmt.Clause.Build(stmt.schema)
+
+	opts := options.Find()
+	if stmt.Paging.Size > 0 {
+		opts.SetLimit(int64(stmt.Paging.Size))
+	}
+	if offset := stmt.Paging.Offset(); offset > 0 {
+		opts.SetSkip(int64(offset))
+	}
+	if order := stmt.Order(); len(order) > 0 {
+		opts.SetSort(order)
+	}
+	if projection := stmt.selector.Projection(stmt.schema); len(projection) > 0 {
+		opts.SetProjection(projection)
+	}
+
+	var cursor *mongo.Cursor
+	if cursor, err = coll.Find(stmt.Context, filter, opts); err != nil {
+		return
+	}
+	// 移除defer关闭cursor，因为需要在Range方法中使用cursor进行遍历
+	// 将cursor存储在stmt的value字段中，供Range方法使用
+	tx.stmt.value = cursor
+
+	return
+}
+
+// cmdPage 分页查询
+func cmdPage(tx *DB, client *mongo.Client) (err error) {
+	stmt := tx.stmt
+	paging := stmt.Paging
+	if paging == nil {
+		return errors.New("paging is nil")
+	}
+
+	paging.Init(DefaultPageSize)
+	if paging.Rows == nil {
+		paging.Rows = []bson.M{}
+	}
+
+	reflectRows := reflect.ValueOf(paging.Rows)
+	indirectRows := reflect.Indirect(reflectRows)
+	if indirectRows.Kind() != reflect.Array && indirectRows.Kind() != reflect.Slice {
+		return fmt.Errorf("paging.Rows type not Array or Slice")
+	}
+
+	if paging.Update > 0 {
+		if f := stmt.schema.LookUpField(DBNameUpdate); f != nil {
+			// 这里不需要重新设置Order和Where，因为这些应该已经在stmt中设置好了
+		}
+	}
+
+	coll := client.Database(tx.dbname).Collection(stmt.table)
+	filter := stmt.Clause.Build(stmt.schema)
+
+	if paging.Record == 0 {
+		var val int64
+		if val, err = coll.CountDocuments(stmt.Context, filter); err != nil {
+			return
+		}
+		paging.Result(int(val))
+	}
+
+	order := stmt.Order()
+	opts := options.Find()
+	if stmt.Paging.Size > 0 {
+		opts.SetLimit(int64(stmt.Paging.Size))
+	}
+	if offset := stmt.Paging.Offset(); offset > 0 {
+		opts.SetSkip(int64(offset))
+	}
+	if len(order) > 0 {
+		opts.SetSort(order)
+	}
+	if projection := stmt.selector.Projection(stmt.schema); len(projection) > 0 {
+		opts.SetProjection(projection)
+	}
+
+	var cursor *mongo.Cursor
+	if cursor, err = coll.Find(stmt.Context, filter, opts); err != nil {
+		return
+	}
+
+	if reflectRows.Kind() == reflect.Ptr {
+		err = cursor.All(stmt.Context, paging.Rows)
+	} else {
+		err = cursor.All(stmt.Context, &paging.Rows)
+	}
+
+	if err == nil {
+		tx.RowsAffected = int64(indirectRows.Len())
+	}
 	return
 }
 
 // Update 通用更新
 // map ,BuildUpdate.m 支持 $set $incr $setOnInsert, 其他未使用$字段一律视为$set操作
-func cmdUpdate(tx *DB) (err error) {
+func cmdUpdate(tx *DB, client *mongo.Client) (err error) {
 	stmt := tx.stmt
 	var data update.Update
 	var upsert bool
@@ -48,7 +151,7 @@ func cmdUpdate(tx *DB) (err error) {
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
-	coll := tx.client.Database(tx.dbname).Collection(stmt.table)
+	coll := client.Database(tx.dbname).Collection(stmt.table)
 	if stmt.multiple {
 		opts := options.Update()
 		var result *mongo.UpdateResult
@@ -109,12 +212,12 @@ func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data
 }
 
 // cmdDelete delete value match given conditions, if the value has primary key, then will including the primary key as condition
-func cmdDelete(tx *DB) (err error) {
+func cmdDelete(tx *DB, client *mongo.Client) (err error) {
 	filter := tx.stmt.Clause.Build(tx.stmt.schema)
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
-	coll := tx.client.Database(tx.dbname).Collection(tx.stmt.table)
+	coll := client.Database(tx.dbname).Collection(tx.stmt.table)
 	var result *mongo.DeleteResult
 	if clause.Multiple(filter) {
 		result, err = coll.DeleteMany(tx.stmt.Context, filter)
@@ -129,7 +232,7 @@ func cmdDelete(tx *DB) (err error) {
 
 // cmdQuery find records that match given conditions
 // value must be a pointer to a slice
-func cmdQuery(tx *DB) (err error) {
+func cmdQuery(tx *DB, client *mongo.Client) (err error) {
 	filter := tx.stmt.Clause.Build(tx.stmt.schema)
 	//b, _ := json.Marshal(filter)
 	//fmt.Printf("Query Filter:%+v\n", string(b))
@@ -142,7 +245,7 @@ func cmdQuery(tx *DB) (err error) {
 	}
 	order := tx.stmt.Order()
 
-	coll := tx.client.Database(tx.dbname).Collection(tx.stmt.table)
+	coll := client.Database(tx.dbname).Collection(tx.stmt.table)
 	if !multiple {
 		opts := options.FindOne()
 		if offset := tx.stmt.Paging.Offset(); offset > 0 {

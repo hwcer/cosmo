@@ -1,14 +1,10 @@
 package cosmo
 
-import (
-	"go.mongodb.org/mongo-driver/mongo"
-)
-
 // Config GORM config
 type Config struct {
+	pool      *PoolManager
 	models    []any
 	dbname    string
-	client    *mongo.Client
 	callbacks *callbacks
 }
 

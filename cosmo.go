@@ -39,17 +39,21 @@ func New(configs ...*Config) (db *DB) {
 
 func (db *DB) Start(dbname string, address interface{}) (err error) {
 	db.dbname = dbname
+	var uri string
 	switch address.(type) {
 	case string:
-		db.Config.client, err = NewClient(address.(string))
-	case *mongo.Client:
-		db.Config.client = address.(*mongo.Client)
+		uri = address.(string)
+		// 当传入连接字符串时，使用NewPoolManager创建客户端
+		db.Config.pool = NewPoolManager(uri, DefaultPoolConfig())
+		db.Config.pool.Start()
+	case *PoolManager:
+		db.Config.pool = address.(*PoolManager)
+		db.Config.pool.Start()
 	default:
 		err = errors.New("address error")
-	}
-	if err != nil {
 		return
 	}
+
 	if err = db.AutoMigrator(db.models...); err != nil {
 		return
 	}
@@ -57,8 +61,12 @@ func (db *DB) Start(dbname string, address interface{}) (err error) {
 }
 
 func (db *DB) Close() (err error) {
-	if db.client != nil {
-		err = db.client.Disconnect(context.Background())
+	if db.pool != nil {
+		// 通过poolManager关闭client
+		if err = db.pool.client.Disconnect(context.Background()); err != nil {
+			return
+		}
+		// 这里可以添加PoolManager的关闭逻辑，如果有的话
 	}
 	return
 }
@@ -102,8 +110,8 @@ func (db *DB) Collection(model any) (tx *DB, coll *mongo.Collection) {
 	default:
 		tx = db.Model(model)
 	}
-	tx = tx.callbacks.Call(tx, func(tx *DB) error {
-		coll = tx.client.Database(tx.dbname).Collection(tx.stmt.table)
+	tx = tx.callbacks.Call(tx, func(tx *DB, client *mongo.Client) error {
+		coll = client.Database(tx.dbname).Collection(tx.stmt.table)
 		return nil
 	})
 	return

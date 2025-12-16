@@ -45,8 +45,8 @@ func (this *BulkWrite) Submit() (err error) {
 		this.opts = append(this.opts, &options.BulkWriteOptions{Ordered: &ordered})
 	}
 
-	tx := this.tx.callbacks.Call(this.tx, func(db *DB) error {
-		coll := db.client.Database(db.dbname).Collection(db.stmt.table)
+	tx := this.tx.callbacks.Call(this.tx, func(db *DB, client *mongo.Client) error {
+		coll := client.Database(db.dbname).Collection(db.stmt.table)
 		if this.result, err = coll.BulkWrite(context.Background(), this.models, this.opts...); err == nil {
 			this.models = nil
 		}
