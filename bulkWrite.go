@@ -2,6 +2,7 @@ package cosmo
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
@@ -45,15 +46,14 @@ func (this *BulkWrite) Submit() (err error) {
 		this.opts = append(this.opts, &options.BulkWriteOptions{Ordered: &ordered})
 	}
 
-	tx := this.tx.callbacks.Call(this.tx, func(db *DB, client *mongo.Client) error {
+	this.tx = this.tx.callbacks.Call(this.tx, func(db *DB, client *mongo.Client) error {
 		coll := client.Database(db.dbname).Collection(db.stmt.table)
 		if this.result, err = coll.BulkWrite(context.Background(), this.models, this.opts...); err == nil {
 			this.models = nil
 		}
 		return err
 	})
-	err = tx.Error
-	return
+	return this.tx.Error
 }
 func (this *BulkWrite) update(data any, where []any, includeZeroValue bool) {
 	stmt := this.tx.stmt
@@ -117,4 +117,33 @@ func (this *BulkWrite) Result() *mongo.BulkWriteResult {
 
 func (this *BulkWrite) Options(opts ...*options.BulkWriteOptions) {
 	this.opts = append(this.opts, opts...)
+}
+
+type bulkWriteLog struct {
+	Model  string
+	Filter any
+	Value  any
+}
+
+func (this *BulkWrite) String() string {
+	var logs []bulkWriteLog
+	for _, i := range this.models {
+		switch model := i.(type) {
+		case *mongo.UpdateOneModel:
+			logs = append(logs, bulkWriteLog{Model: "Update", Filter: model.Filter, Value: model.Update})
+		case *mongo.InsertOneModel:
+			logs = append(logs, bulkWriteLog{Model: "Insert", Value: model.Document})
+		case *mongo.DeleteOneModel:
+			logs = append(logs, bulkWriteLog{Model: "Delete", Filter: model.Filter})
+		}
+	}
+
+	opts := map[string]interface{}{}
+	opts["Database"] = this.tx.dbname
+	opts["Collection"] = this.tx.stmt.table
+	opts["Operation"] = logs
+
+	b, _ := json.Marshal(opts)
+
+	return string(b)
 }
