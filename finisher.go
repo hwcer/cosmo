@@ -1,6 +1,7 @@
 package cosmo
 
 import (
+	"errors"
 	"reflect"
 
 	"github.com/hwcer/cosmo/update"
@@ -40,26 +41,23 @@ func (db *DB) Range(f func(Cursor) bool) (tx *DB) {
 	// 先获取新实例
 	tx = db.getInstance()
 	// 使用回调机制执行cmdRange命令
-	tx = tx.callbacks.Call(tx, cmdRange)
-	if tx.Error != nil {
-		return tx
-	}
-	// 从stmt的value字段中获取cursor
-	cursor, ok := tx.stmt.value.(*mongo.Cursor)
-	if !ok || cursor == nil {
-		return tx
-	}
-	defer cursor.Close(tx.stmt.Context)
-
-	for cursor.Next(tx.stmt.Context) {
-		if !f(cursor) {
-			break
+	tx = tx.callbacks.Call(tx, cmdRange, func(db *DB) error {
+		cursor, ok := tx.stmt.value.(*mongo.Cursor)
+		if !ok || cursor == nil {
+			return errors.New("cursor is nil")
 		}
-	}
+		defer cursor.Close(tx.stmt.Context)
 
-	if err := cursor.Err(); err != nil {
-		tx.Error = err
-	}
+		for cursor.Next(tx.stmt.Context) {
+			if !f(cursor) {
+				break
+			}
+		}
+		if err := cursor.Err(); err != nil {
+			tx.Error = err
+		}
+		return nil
+	})
 
 	return tx
 }

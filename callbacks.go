@@ -31,9 +31,9 @@ type processor struct {
 // db: 数据库连接实例
 // handle: 自定义处理函数
 // 返回值: 执行结果的数据库连接实例
-func (cs *callbacks) Call(db *DB, handle executeHandle) *DB {
+func (cs *callbacks) Call(db *DB, handle executeHandle, done ...executeDone) *DB {
 	p := &processor{handle: handle}
-	return p.Execute(db)
+	return p.Execute(db, done...)
 }
 
 func (cs *callbacks) Create() *processor {
@@ -55,7 +55,7 @@ func (cs *callbacks) Delete() *processor {
 // Execute 执行操作
 //
 //	handle func(tx *DB,query BuildUpdate.M) error
-func (p *processor) Execute(db *DB) (tx *DB) {
+func (p *processor) Execute(db *DB, done ...executeDone) (tx *DB) {
 	tx = db.stmt.Parse()
 	if tx.Error != nil {
 		return
@@ -94,9 +94,16 @@ func (p *processor) Execute(db *DB) (tx *DB) {
 		tx.Errorf(err)
 		return
 	}
-	//清理val
-	stmt.value = nil
-	stmt.reflectValue = reflect.Value{}
+	defer func() {
+		stmt.value = nil
+		stmt.reflectValue = reflect.Value{}
+	}()
+
+	for _, d := range done {
+		if err = d(db); err != nil {
+			return
+		}
+	}
 
 	//fmt.Printf("Execute:%v,%+v\n", stmt.reflectValue.Kind(), stmt.reflectValue.Interface())
 	return

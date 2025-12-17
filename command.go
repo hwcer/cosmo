@@ -65,7 +65,7 @@ func cmdRange(tx *DB, client *mongo.Client) (err error) {
 	}
 	// 移除defer关闭cursor，因为需要在Range方法中使用cursor进行遍历
 	// 将cursor存储在stmt的value字段中，供Range方法使用
-	tx.stmt.value = cursor
+	stmt.value = cursor
 
 	return
 }
