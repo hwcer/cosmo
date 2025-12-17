@@ -135,6 +135,8 @@ func (this *BulkWrite) String() string {
 			logs = append(logs, bulkWriteLog{Model: "Insert", Value: model.Document})
 		case *mongo.DeleteOneModel:
 			logs = append(logs, bulkWriteLog{Model: "Delete", Filter: model.Filter})
+		case *mongo.DeleteManyModel:
+			logs = append(logs, bulkWriteLog{Model: "Delete", Filter: model.Filter})
 		}
 	}
 
