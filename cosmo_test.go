@@ -1,10 +1,11 @@
 package cosmo
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
 	"strconv"
 	"testing"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type Role struct {
@@ -72,7 +73,7 @@ func TestCosmo(t *testing.T) {
 		t.Logf("count:%v", count)
 	}
 	t.Logf("=================delete====================")
-	tx = db.Delete(role)
+	tx = db.Model(&Role{}).Delete(role)
 	if tx.Error != nil {
 		t.Logf("%v", tx.Error)
 	} else {

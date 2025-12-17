@@ -10,16 +10,20 @@ import (
 	"strings"
 )
 
-// AutoMigrator returns migrator
-// Sparse
+// AutoMigrator 自动迁移功能，根据模型定义自动创建或更新索引
+// dst: 要迁移的模型对象，可以传入多个模型
+// 返回值: 迁移过程中发生的错误
 func (db *DB) AutoMigrator(dst ...interface{}) error {
 	for _, mod := range dst {
+		// 解析模型获取元数据
 		sch, err := schema.Parse(mod)
 		if err != nil {
 			return err
 		}
+		// 解析模型定义的索引
 		indexes := sch.ParseIndexes()
 		for _, index := range indexes {
+			// 创建或更新索引
 			if e := db.indexes(mod, index); e != nil {
 				return fmt.Errorf("AutoMigrator[%v.%v]:%v", db.dbname, sch.Table, e)
 			}

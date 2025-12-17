@@ -1,4 +1,4 @@
-package cosmo
+package health
 
 import (
 	"context"
@@ -51,7 +51,7 @@ func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Cl
 
 	// 连接池配置
 	c.SetMinPoolSize(20)                  // 最小连接池大小，确保基础并发能力
-	c.SetMaxPoolSize(500)                 // 最大连接池大小，根据服务器资源和并发需求调整
+	c.SetMaxPoolSize(200)                 // 最大连接池大小，根据服务器资源和并发需求调整
 	c.SetMaxConnIdleTime(5 * time.Minute) // 连接最大空闲时间，避免资源浪费
 
 	// 超时配置

@@ -6,25 +6,31 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// initializeCallbacks 初始化回调管理器
+// 创建默认的处理器映射，包括查询、创建、更新和删除操作
 func initializeCallbacks() *callbacks {
 	cb := &callbacks{processors: make(map[string]*processor)}
-	cb.processors["query"] = &processor{handle: cmdQuery}
-	cb.processors["create"] = &processor{handle: cmdCreate}
-	cb.processors["update"] = &processor{handle: cmdUpdate}
-	cb.processors["delete"] = &processor{handle: cmdDelete}
+	cb.processors["query"] = &processor{handle: cmdQuery}   // 查询操作处理器
+	cb.processors["create"] = &processor{handle: cmdCreate} // 创建操作处理器
+	cb.processors["update"] = &processor{handle: cmdUpdate} // 更新操作处理器
+	cb.processors["delete"] = &processor{handle: cmdDelete} // 删除操作处理器
 	return cb
 }
 
-// callbacks gorm callbacks manager
+// callbacks 回调管理器，用于管理不同类型的数据库操作处理器
 type callbacks struct {
-	processors map[string]*processor
+	processors map[string]*processor // 处理器映射，键为操作类型，值为对应的处理器
 }
 
+// processor 操作处理器，用于执行具体的数据库操作
 type processor struct {
-	handle executeHandle
+	handle executeHandle // 操作处理函数
 }
 
-// Call 自定义调用
+// Call 执行自定义调用
+// db: 数据库连接实例
+// handle: 自定义处理函数
+// 返回值: 执行结果的数据库连接实例
 func (cs *callbacks) Call(db *DB, handle executeHandle) *DB {
 	p := &processor{handle: handle}
 	return p.Execute(db)

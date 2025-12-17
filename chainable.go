@@ -2,10 +2,10 @@ package cosmo
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
-	"go.mongodb.org/mongo-driver/bson"
-	"reflect"
 )
 
 // Model specify the model you would like to run db operations
@@ -97,9 +97,10 @@ func (db *DB) Order(key string, value int) (tx *DB) {
 	} else {
 		value = -1
 	}
-	tx.stmt.orders = append(tx.stmt.orders, bson.E{
-		Key: key, Value: value,
-	})
+	if tx.stmt.orders == nil {
+		tx.stmt.orders = make(map[string]int)
+	}
+	tx.stmt.orders[key] = value
 	return
 }
 

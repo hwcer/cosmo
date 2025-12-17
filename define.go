@@ -2,12 +2,10 @@ package cosmo
 
 import "go.mongodb.org/mongo-driver/mongo"
 
-const DBNameUpdate = "update"
-
-// Plugin GORM plugin interface
-//type Plugin interface {
-//	Name() string
-//	Initialize(*DB) error
-//}
+const FieldNameUpdate = "update" //UPDATE
 
 type executeHandle func(db *DB, client *mongo.Client) error
+
+type Cursor interface {
+	Decode(val interface{}) error
+}

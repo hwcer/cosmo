@@ -1,8 +1,10 @@
 package cosmo
 
+import "github.com/hwcer/cosmo/health"
+
 // Config GORM config
 type Config struct {
-	pool      *PoolManager
+	pool      *health.Manager
 	models    []any
 	dbname    string
 	callbacks *callbacks

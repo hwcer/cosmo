@@ -88,11 +88,8 @@ func cmdPage(tx *DB, client *mongo.Client) (err error) {
 	if indirectRows.Kind() != reflect.Array && indirectRows.Kind() != reflect.Slice {
 		return fmt.Errorf("paging.Rows type not Array or Slice")
 	}
-
 	if paging.Update > 0 {
-		if f := stmt.schema.LookUpField(DBNameUpdate); f != nil {
-			// 这里不需要重新设置Order和Where，因为这些应该已经在stmt中设置好了
-		}
+		tx.Order(FieldNameUpdate, -1)
 	}
 
 	coll := client.Database(tx.dbname).Collection(stmt.table)
@@ -114,9 +111,11 @@ func cmdPage(tx *DB, client *mongo.Client) (err error) {
 	if offset := stmt.Paging.Offset(); offset > 0 {
 		opts.SetSkip(int64(offset))
 	}
+
 	if len(order) > 0 {
 		opts.SetSort(order)
 	}
+
 	if projection := stmt.selector.Projection(stmt.schema); len(projection) > 0 {
 		opts.SetProjection(projection)
 	}

@@ -7,25 +7,36 @@ import (
 	"time"
 )
 
+// CacheEventType 缓存事件类型
 type CacheEventType int8
 
 const (
-	CacheEventTypeCreate CacheEventType = 0
-	CacheEventTypeUpdate CacheEventType = 1
-	CacheEventTypeDelete CacheEventType = 2
+	CacheEventTypeCreate CacheEventType = 0 // 创建事件
+	CacheEventTypeUpdate CacheEventType = 1 // 更新事件
+	CacheEventTypeDelete CacheEventType = 2 // 删除事件
 )
 
+// CacheModel 缓存模型接口，用于支持缓存功能的模型需要实现此接口
 type CacheModel interface {
-	GetUpdate() int64
+	GetUpdate() int64 // 获取模型的更新时间戳
 }
 
+// CacheSetter 缓存设置函数类型，用于将模型添加到缓存中
 type CacheSetter func(k any, v CacheModel)
-type CacheFilter func(v CacheModel) any //返回nil 过滤失败
 
+// CacheFilter 缓存过滤函数类型，用于过滤缓存数据，返回nil表示过滤失败
+type CacheFilter func(v CacheModel) any
+
+// CacheHandle 缓存句柄接口，用于实现缓存的加载和刷新
 type CacheHandle interface {
+	// Reload 重新加载缓存数据
+	// ts: 时间戳，用于加载指定时间之后更新的数据
+	// cb: 缓存设置函数，用于将加载的数据添加到缓存中
 	Reload(ts int64, cb CacheSetter) error
 }
 
+// NewCache 创建一个新的缓存实例
+// handle: 缓存句柄，用于加载和刷新缓存数据
 func NewCache(handle CacheHandle) *Cache {
 	i := &Cache{handle: handle}
 	i.time = time.Now().Unix()
@@ -33,12 +44,14 @@ func NewCache(handle CacheHandle) *Cache {
 	return i
 }
 
+// NewCacheData 创建一个新的缓存数据实例
 func NewCacheData() *CacheData {
 	return &CacheData{dict: make(map[any]CacheModel)}
 }
 
+// CacheData 缓存数据结构体，用于存储缓存的模型数据
 type CacheData struct {
-	dict map[any]CacheModel
+	dict map[any]CacheModel // 缓存数据映射，键为模型ID，值为模型对象
 }
 
 func (this *CacheData) Copy() *CacheData {

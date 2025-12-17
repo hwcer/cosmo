@@ -1,6 +1,8 @@
 package cosmo
 
 import (
+	"reflect"
+
 	"github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -24,16 +26,13 @@ func (db *DB) Page(paging *Paging, where ...any) (tx *DB) {
 	tx = db.getInstance()
 	// 对新实例进行修改
 	tx.stmt.Paging = paging
+	tx.stmt.value = paging.Rows
 	if len(where) > 0 {
 		tx = tx.Where(where[0], where[1:]...)
 	}
 	// 使用回调机制执行cmdPage命令
 	tx = tx.callbacks.Call(tx, cmdPage)
 	return tx
-}
-
-type Cursor interface {
-	Decode(val interface{}) error
 }
 
 // Range 遍历
@@ -173,10 +172,25 @@ func (db *DB) Updates(values any, conds ...any) (tx *DB) {
 // db.model(&User).delete(1) 匹配 _id=1
 // db.model(&User).delete([]int{1,2,3}) 匹配 _id IN (1,2,3)
 // db.model(&User).delete("name = ?","myname") 匹配 name=myname
+// db.delete(&User{Id:1}) 根据结构体中的_id字段删除记录
 func (db *DB) Delete(conds ...interface{}) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
-		db.Where(conds[0], conds[1:]...)
+		// 检查第一个参数是否为结构体或指针，设置为model以解析表名
+		val := conds[0]
+		valType := reflect.TypeOf(val)
+		if valType != nil {
+			if valType.Kind() == reflect.Ptr {
+				valType = valType.Elem()
+			}
+			if valType.Kind() == reflect.Struct {
+				tx.stmt.model = val
+			} else {
+				tx = tx.Where(conds[0], conds[1:]...)
+			}
+		} else {
+			tx = tx.Where(conds[0], conds[1:]...)
+		}
 	}
 	return tx.callbacks.Delete().Execute(tx)
 }
