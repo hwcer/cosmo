@@ -2,43 +2,88 @@ package cosmo
 
 import (
 	"errors"
+	"strings"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
-	ErrInvalidConfig = errors.New("invalid config")
-	// ErrInvalidTransaction invalid transaction when you are trying to `Commit` or `Rollback`
-	ErrInvalidTransaction = errors.New("invalid transaction")
-	// ErrNotImplemented not implemented
-	ErrNotImplemented = errors.New("not implemented")
-	// ErrMissingWhereClause missing where clause
 	ErrMissingWhereClause = errors.New("WHERE conditions required")
-	// ErrUnsupportedRelation unsupported relations
-	ErrUnsupportedRelation = errors.New("unsupported relations")
-	// ErrPrimaryKeyRequired primary keys required
-	ErrPrimaryKeyRequired = errors.New("primary key required")
-	// ErrModelValueRequired model value required
-	ErrModelValueRequired = errors.New("model value required")
-	// ErrInvalidData unsupported data
-	ErrInvalidData = errors.New("unsupported data")
-	// ErrUnsupportedDriver unsupported driver
-	ErrUnsupportedDriver = errors.New("unsupported driver")
-	// ErrRegistered registered
-	ErrRegistered = errors.New("registered")
-	// ErrInvalidField invalid field
-	ErrInvalidField = errors.New("invalid field")
-	// ErrEmptySlice empty slice found
-	ErrEmptySlice = errors.New("empty slice found")
-	// ErrDryRunModeUnsupported dry run mode unsupported
-	ErrDryRunModeUnsupported = errors.New("dry run mode unsupported")
-	// ErrInvalidDB invalid db
-	ErrInvalidDB = errors.New("invalid db")
-	// ErrInvalidValue invalid value
+
 	ErrInvalidValue = errors.New("invalid value, should be pointer to struct or slice")
-	ErrInvalidModel = errors.New("invalid model, should be pointer to struct or struct")
-	// ErrInvalidValueOfLength invalid values do not match length
-	ErrInvalidValueOfLength = errors.New("invalid association values, length doesn't match")
 
 	ErrSelectOnOmitsExist = errors.New("select on omits exist")
 
 	ErrOmitOnSelectsExist = errors.New("omit on selects exist")
 )
+
+// 检查是不是无法恢复的业务错误
+//
+//	1、插入时主键重复
+//
+// 2、数据类型错误
+func IsBusinessError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// 优先使用MongoDB官方驱动的主键重复错误判断
+	if mongo.IsDuplicateKeyError(err) {
+		return true
+	}
+
+	// 检查是否是数据类型错误
+	dataTypeErrors := []string{
+		"bad value type",
+		"BSON type",
+		"cannot convert",
+		"type mismatch",
+		"invalid type",
+	}
+
+	errorStr := err.Error()
+	for _, keyword := range dataTypeErrors {
+		if strings.Contains(errorStr, keyword) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// 检查是不是MONGO网络错误
+func IsNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// 优先使用MongoDB官方驱动的网络错误判断
+	if mongo.IsNetworkError(err) || mongo.IsTimeout(err) {
+		return true
+	}
+
+	// 补充检查常见的网络错误关键词，确保全面覆盖
+	errorKeyWords := []string{
+		"connection refused",
+		"connection timeout",
+		"server selection timeout",
+		"socket timeout",
+		"network unreachable",
+		"no reachable servers",
+		"connection reset by peer",
+		"i/o timeout",
+		"context deadline exceeded",
+		"dial tcp",
+		"network error",
+	}
+
+	// 将错误转换为字符串进行检查
+	errorStr := err.Error()
+	for _, keyword := range errorKeyWords {
+		if strings.Contains(errorStr, keyword) {
+			return true
+		}
+	}
+
+	return false
+}

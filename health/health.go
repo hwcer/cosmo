@@ -242,14 +242,6 @@ func (m *Manager) performHealthCheck(ctx context.Context) *Status {
 	return NewStatus(latency+testLatency+serverStatusLatency, nil)
 }
 
-// CheckNow 立即执行一次健康检查
-// 返回值: 健康检查结果
-func (m *Manager) CheckNow() *Status {
-	ctx, cancel := context.WithTimeout(context.Background(), Config.CheckTimeout)
-	defer cancel()
-	return m.performHealthCheck(ctx)
-}
-
 // IsHealthy 快速检查连接是否健康
 // 返回值: true表示连接健康，false表示连接不健康
 // 注意：此方法仅执行ping测试，不包含完整的健康检查
@@ -398,7 +390,7 @@ func (m *Manager) tryRecover() {
 			return
 		}
 
-		if err := oldClient.Disconnect(closeCtx); err != nil {
+		if err = oldClient.Disconnect(closeCtx); err != nil {
 			logger.Error("关闭旧客户端时出错: %v", err)
 		} else {
 			logger.Debug("旧客户端已成功关闭")

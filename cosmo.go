@@ -84,6 +84,14 @@ func (db *DB) Start(dbname string, address interface{}) (err error) {
 	return
 }
 
+func (db *DB) Close() error {
+	return nil
+}
+
+func (db *DB) IsHealthy() bool {
+	return db.Config.pool.IsHealthy()
+}
+
 // Session 创建一个新的数据库会话。
 // 参数 session 包含会话配置，如数据库名称、上下文等。
 // 返回值是新的 DB 实例，用于执行会话相关的操作。
