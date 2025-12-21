@@ -66,12 +66,13 @@ func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Cl
 	// 注意：SetRetryAttempts和SetRetryInterval方法在当前驱动版本中不可用
 	// 如需配置重试策略，请使用对应的重试选项结构体
 
-	// 读取偏好 - 根据业务需求选择
-	// 生产环境建议使用secondaryPreferred分散读负载
-	c.SetReadPreference(readpref.SecondaryPreferred())
+	// 读取偏好 - 单节点数据库应使用primary
+	// 对于副本集环境，可根据业务需求选择其他模式
+	c.SetReadPreference(readpref.Primary())
 
-	// 连接模式
-	c.SetDirect(false) // 启用负载均衡模式，适用于副本集或分片集群
+	// 连接模式 - 单节点数据库应使用direct模式
+	// 对于副本集或分片集群，可设置为false启用负载均衡
+	c.SetDirect(true)
 
 	client, err = mongo.Connect(context.Background(), append([]*options.ClientOptions{c}, opts...)...)
 	if err != nil {
