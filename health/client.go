@@ -70,9 +70,49 @@ func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Cl
 	// 对于副本集环境，可根据业务需求选择其他模式
 	c.SetReadPreference(readpref.Primary())
 
-	// 连接模式 - 单节点数据库应使用direct模式
-	// 对于副本集或分片集群，可设置为false启用负载均衡
-	c.SetDirect(true)
+	// 拓扑自动识别 - 根据连接地址自动决定连接模式
+	// 如果地址中只包含一个主机，则使用direct模式（适合单节点部署）
+	// 如果地址中包含多个主机，则不使用direct模式（适合副本集或分片集群）
+	// 注意：如果URI中显式指定了direct选项，则优先使用URI中的配置
+	// 例如：mongodb://host1,host2,host3/?direct=true
+	// 简单解析地址，检查主机数量（逗号分隔的部分）
+	// 首先检查原始地址是否包含逗号
+	uri := address
+	if !strings.HasPrefix(uri, "mongodb") {
+		uri = "mongodb://" + uri
+	}
+
+	// 检查URI中是否显式指定了direct选项
+	hasDirectOption := strings.Contains(uri, "?direct=") || strings.Contains(uri, "&direct=")
+
+	if !hasDirectOption {
+		// 解析地址，计算主机数量
+		// 去除URI前缀和查询参数
+
+		hostsPart := strings.TrimPrefix(uri, "mongodb://")
+		if idx := strings.Index(hostsPart, "/"); idx != -1 {
+			hostsPart = hostsPart[:idx]
+		}
+		if idx := strings.Index(hostsPart, "?"); idx != -1 {
+			hostsPart = hostsPart[:idx]
+		}
+
+		// 计算主机数量（逗号分隔）
+		hosts := strings.Split(hostsPart, ",")
+		// 过滤掉空字符串（如果有的话）
+		nonEmptyHosts := make([]string, 0, len(hosts))
+		for _, host := range hosts {
+			if strings.TrimSpace(host) != "" {
+				nonEmptyHosts = append(nonEmptyHosts, host)
+			}
+		}
+
+		if len(nonEmptyHosts) == 1 {
+			c.SetDirect(true) // 单节点，使用direct模式
+		} else {
+			c.SetDirect(false) // 多节点，不使用direct模式
+		}
+	}
 
 	client, err = mongo.Connect(context.Background(), append([]*options.ClientOptions{c}, opts...)...)
 	if err != nil {
