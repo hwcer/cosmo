@@ -88,10 +88,7 @@ func cmdPage(tx *DB, client *mongo.Client) (err error) {
 	if indirectRows.Kind() != reflect.Array && indirectRows.Kind() != reflect.Slice {
 		return fmt.Errorf("paging.Rows type not Array or Slice")
 	}
-	if paging.Update > 0 {
-		tx.Order(FieldNameUpdate, -1)
-	}
-
+	
 	coll := client.Database(tx.dbname).Collection(stmt.table)
 	filter := stmt.Clause.Build(stmt.schema)
 
