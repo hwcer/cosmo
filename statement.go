@@ -41,6 +41,7 @@ type Statement struct {
 	reflectValue         reflect.Value   // 反射值，用于处理模型对象
 	includeZeroValue     bool            // 更新时是否包含零值字段
 	updateAndModifyModel bool            // 更新成功时是否将结果写入model
+	pageUpdateField      string          //分页增量更新的字段名，默认update
 }
 
 // Parse 解析模型并初始化Statement

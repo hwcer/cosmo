@@ -62,6 +62,12 @@ func (db *DB) IncludeZeroValue() (tx *DB) {
 	return
 }
 
+func (db *DB) PageUpdateField(field string) (tx *DB) {
+	tx = db.getInstance()
+	tx.stmt.pageUpdateField = field
+	return
+}
+
 // Omit specify fields that you want to ignore when creating, updating and querying
 func (db *DB) Omit(columns ...string) (tx *DB) {
 	tx = db.getInstance()

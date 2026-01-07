@@ -84,8 +84,12 @@ func cmdPage(tx *DB, client *mongo.Client) (err error) {
 	}
 
 	if paging.Update > 0 {
-		tx = tx.Order(FieldNameUpdate, -1)
-		tx = tx.Where(fmt.Sprintf("%s > ?", FieldNameUpdate), paging.Update)
+		updateFieldName := stmt.pageUpdateField
+		if updateFieldName == "" {
+			updateFieldName = PageUpdateFieldName
+		}
+		tx = tx.Order(updateFieldName, -1)
+		tx = tx.Where(fmt.Sprintf("%s > ?", updateFieldName), paging.Update)
 	}
 	reflectRows := reflect.ValueOf(paging.Rows)
 	indirectRows := reflect.Indirect(reflectRows)

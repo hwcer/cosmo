@@ -2,7 +2,7 @@ package cosmo
 
 import "go.mongodb.org/mongo-driver/mongo"
 
-const FieldNameUpdate = "update" //UPDATE
+const PageUpdateFieldName = "update" //UPDATE
 
 type executeDone func(db *DB) error
 
