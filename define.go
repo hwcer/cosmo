@@ -1,6 +1,6 @@
 package cosmo
 
-import "go.mongodb.org/mongo-driver/mongo"
+import "go.mongodb.org/mongo-driver/v2/mongo"
 
 const PageUpdateFieldName = "update" //UPDATE
 

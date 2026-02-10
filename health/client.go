@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
 const (
@@ -56,7 +56,7 @@ func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Cl
 
 	// 超时配置
 	c.SetConnectTimeout(10 * time.Second)         // 连接超时时间
-	c.SetSocketTimeout(30 * time.Second)          // 套接字超时时间，处理复杂查询
+	c.SetTimeout(30 * time.Second)                // 超时时间，处理复杂查询
 	c.SetServerSelectionTimeout(15 * time.Second) // 服务器选择超时时间
 	c.SetHeartbeatInterval(5 * time.Second)       // 心跳检测间隔，快速发现节点变化
 
@@ -88,7 +88,6 @@ func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Cl
 	if !hasDirectOption {
 		// 解析地址，计算主机数量
 		// 去除URI前缀和查询参数
-
 		hostsPart := strings.TrimPrefix(uri, "mongodb://")
 		if idx := strings.Index(hostsPart, "/"); idx != -1 {
 			hostsPart = hostsPart[:idx]
@@ -114,7 +113,8 @@ func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Cl
 		}
 	}
 
-	client, err = mongo.Connect(context.Background(), append([]*options.ClientOptions{c}, opts...)...)
+	// v2 版本的 Connect 不再需要 context.Context 参数
+	client, err = mongo.Connect(append([]*options.ClientOptions{c}, opts...)...)
 	if err != nil {
 		return
 	}

@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/hwcer/cosmo/update"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 const DefaultPageSize = 1000
@@ -86,7 +86,7 @@ func (db *DB) First(val any, where ...any) (tx *DB) {
 	}
 	tx.Limit(1)
 	if len(tx.stmt.orders) == 0 {
-		tx = tx.Order("_id", 1)
+		tx = tx.Order("_id", -1)
 	}
 	tx.stmt.value = val
 	return tx.callbacks.Query().Execute(tx)

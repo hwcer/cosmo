@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hwcer/logger"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // sqlConditionSplit SQL语法分隔符，用于解析SQL风格的查询条件

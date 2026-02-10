@@ -6,7 +6,7 @@ import (
 
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/utils"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // 更新操作类型常量定义

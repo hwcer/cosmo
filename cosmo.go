@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/hwcer/cosmo/health"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // DB 是 Cosmo ORM 框架的核心结构体，提供了数据库操作的入口点。
@@ -228,6 +228,6 @@ func (db *DB) getInstance() *DB {
 	return tx
 }
 
-func (db *DB) ObjectID() primitive.ObjectID {
-	return primitive.NewObjectID()
+func (db *DB) ObjectID() bson.ObjectID {
+	return bson.NewObjectID()
 }

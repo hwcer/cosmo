@@ -6,13 +6,13 @@ import (
 
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type BulkWrite struct {
 	tx     *DB
-	opts   []*options.BulkWriteOptions
+	opts   []options.Lister[options.BulkWriteOptions]
 	models []mongo.WriteModel
 	result *mongo.BulkWriteResult
 	filter BulkWriteUpdateFilter
@@ -42,8 +42,7 @@ func (this *BulkWrite) Submit() (err error) {
 		return nil
 	}
 	if len(this.opts) == 0 {
-		ordered := false
-		this.opts = append(this.opts, &options.BulkWriteOptions{Ordered: &ordered})
+		this.opts = append(this.opts, options.BulkWrite().SetOrdered(false))
 	}
 
 	this.tx = this.tx.callbacks.Call(this.tx, func(db *DB, client *mongo.Client) error {
@@ -115,7 +114,7 @@ func (this *BulkWrite) Result() *mongo.BulkWriteResult {
 	return this.result
 }
 
-func (this *BulkWrite) Options(opts ...*options.BulkWriteOptions) {
+func (this *BulkWrite) Options(opts ...options.Lister[options.BulkWriteOptions]) {
 	this.opts = append(this.opts, opts...)
 }
 

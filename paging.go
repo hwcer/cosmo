@@ -1,7 +1,7 @@
 package cosmo
 
 import (
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // Paging 分页
@@ -40,7 +40,7 @@ func (this *Paging) Offset() int {
 }
 
 // Options 转换成FindOptions
-func (this *Paging) Options() *options.FindOptions {
+func (this *Paging) Options() options.Lister[options.FindOptions] {
 	opts := options.Find()
 	opts.SetLimit(int64(this.Size))
 	if offset := this.Offset(); offset > 1 {

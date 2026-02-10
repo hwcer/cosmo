@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
-	"go.mongodb.org/mongo-driver/mongo"
-	"strings"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // AutoMigrator 自动迁移功能，根据模型定义自动创建或更新索引
@@ -38,8 +39,8 @@ func (db *DB) indexes(model interface{}, index *schema.Index) (err error) {
 		return tx.Error
 	}
 	indexView := coll.Indexes()
-	var mongoIndex *mongo.IndexModel
-	if mongoIndex, err = index.Build(db.indexPartialBuild); err != nil {
+	mongoIndex, err := index.Build(db.indexPartialBuild)
+	if err != nil {
 		return err
 	}
 	_, err = indexView.CreateOne(context.Background(), *mongoIndex)

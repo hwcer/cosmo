@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"reflect"
 	"regexp"
 	"runtime"

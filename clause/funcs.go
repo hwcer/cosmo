@@ -1,6 +1,6 @@
 package clause
 
-import "go.mongodb.org/mongo-driver/bson"
+import "go.mongodb.org/mongo-driver/v2/bson"
 
 // Multiple 判断是批量操作还是单个文档操作
 // 通过检查查询条件中主键字段的值类型来判断：

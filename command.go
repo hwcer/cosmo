@@ -7,9 +7,9 @@ import (
 
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // Create insert the value into dbname
@@ -157,7 +157,7 @@ func cmdUpdate(tx *DB, client *mongo.Client) (err error) {
 	}
 	coll := client.Database(tx.dbname).Collection(stmt.table)
 	if stmt.multiple {
-		opts := options.Update()
+		opts := options.UpdateMany()
 		var result *mongo.UpdateResult
 		if result, err = coll.UpdateMany(stmt.Context, filter, data, opts); err == nil {
 			tx.RowsAffected = result.MatchedCount
@@ -176,7 +176,7 @@ func cmdUpdate(tx *DB, client *mongo.Client) (err error) {
 }
 
 func UpdateOne(tx *DB, coll *mongo.Collection, filter clause.Filter, data update.Update, upsert bool) (err error) {
-	opts := options.Update()
+	opts := options.UpdateOne()
 	if upsert || tx.stmt.upsert {
 		opts.SetUpsert(true)
 	}
@@ -215,7 +215,7 @@ func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data
 	return
 }
 
-// cmdDelete delete value match given conditions, if the value has primary key, then will including the primary key as condition
+// cmdDelete delete value match given conditions, if it value has primary key, then will including primary key as condition
 func cmdDelete(tx *DB, client *mongo.Client) (err error) {
 	filter := tx.stmt.Clause.Build(tx.stmt.schema)
 	if len(filter) == 0 {

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/hwcer/cosmo/utils"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // operationArray 是包含所有需要数组类型参数的操作符的映射

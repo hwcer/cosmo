@@ -3,7 +3,7 @@ package cosmo
 import (
 	"reflect"
 
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // initializeCallbacks 初始化回调管理器
