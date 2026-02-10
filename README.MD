@@ -397,12 +397,12 @@ import (
     "time"
 
     "github.com/hwcer/cosmo"
-    "go.mongodb.org/mongo-driver/bson/primitive"
+    "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // 定义模型
 type User struct {
-    ID        primitive.ObjectID `bson:"_id" json:"id"`
+    ID        bson.ObjectID `bson:"_id" json:"id"`
     Name      string             `bson:"name" json:"name"`
     Age       int                `bson:"age" json:"age"`
     Email     string             `bson:"email" json:"email"`
