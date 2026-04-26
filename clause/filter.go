@@ -175,6 +175,9 @@ func (this Filter) NOR(v interface{}) {
 	this.Match("$nor", v)
 }
 
+// Merge 合并 src 到当前 Filter，同名 key 直接覆盖。
+// 设计说明：查询中不存在同一字段既等于 A 又等于 B 的合理场景，
+// 同字段多条件应使用操作符（$gt/$lt）或 $and 组合，不应通过多次 Merge 同名 key 实现。
 func (this Filter) Merge(src Filter) {
 	for k, v := range src {
 		this[k] = v

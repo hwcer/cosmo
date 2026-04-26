@@ -1,7 +1,6 @@
 package cosmo
 
 import (
-	"context"
 	"encoding/json"
 
 	"github.com/hwcer/cosmo/clause"
@@ -33,10 +32,10 @@ func (this *BulkWrite) Size() int {
 	return len(this.models)
 }
 
-// Submit 提交修改
+// Submit 提交修改。提交后 models 被清空，重复调用返回 nil（无操作）
 func (this *BulkWrite) Submit() (err error) {
-	if this.tx.stmt.Error != nil {
-		return this.tx.stmt.Error
+	if this.tx.Error != nil {
+		return this.tx.Error
 	}
 	if len(this.models) == 0 {
 		return nil
@@ -47,7 +46,7 @@ func (this *BulkWrite) Submit() (err error) {
 
 	this.tx = this.tx.callbacks.Call(this.tx, func(db *DB, client *mongo.Client) error {
 		coll := client.Database(db.dbname).Collection(db.stmt.table)
-		if this.result, err = coll.BulkWrite(context.Background(), this.models, this.opts...); err == nil {
+		if this.result, err = coll.BulkWrite(db.stmt.Context, this.models, this.opts...); err == nil {
 			this.models = nil
 		}
 		return err

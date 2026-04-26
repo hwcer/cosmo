@@ -43,7 +43,7 @@ func (this *Paging) Offset() int {
 func (this *Paging) Options() options.Lister[options.FindOptions] {
 	opts := options.Find()
 	opts.SetLimit(int64(this.Size))
-	if offset := this.Offset(); offset > 1 {
+	if offset := this.Offset(); offset > 0 {
 		opts.SetSkip(int64(offset))
 	}
 	//if len(this.order) > 0 {

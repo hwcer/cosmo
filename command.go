@@ -160,7 +160,7 @@ func cmdUpdate(tx *DB, client *mongo.Client) (err error) {
 		opts := options.UpdateMany()
 		var result *mongo.UpdateResult
 		if result, err = coll.UpdateMany(stmt.Context, filter, data, opts); err == nil {
-			tx.RowsAffected = result.MatchedCount
+			tx.RowsAffected = result.ModifiedCount
 		}
 	} else if stmt.updateAndModifyModel {
 		err = findOneAndUpdate(tx, coll, filter, data, upsert)
@@ -182,7 +182,7 @@ func UpdateOne(tx *DB, coll *mongo.Collection, filter clause.Filter, data update
 	}
 	var result *mongo.UpdateResult
 	if result, err = coll.UpdateOne(tx.stmt.Context, filter, data, opts); err == nil {
-		tx.RowsAffected = result.MatchedCount
+		tx.RowsAffected = result.ModifiedCount
 	}
 
 	return
@@ -207,10 +207,14 @@ func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data
 		return err
 	}
 
+	if err = updateResult.Decode(&values); err != nil {
+		return err
+	}
 	tx.RowsAffected = 1
-	err = updateResult.Decode(&values)
 	if len(values) > 0 {
-		_ = tx.SetColumn(values)
+		if e := tx.SetColumn(values); e != nil {
+			return e
+		}
 	}
 	return
 }

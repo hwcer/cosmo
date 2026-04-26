@@ -7,7 +7,6 @@ import (
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/utils"
-	"github.com/hwcer/logger"
 )
 
 // MongodbFieldSplit MongoDB字段分隔符
@@ -111,7 +110,7 @@ func parseMap(desc interface{}, sch *schema.Schema) (update Update, err error) {
 func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector, includeZeroValue bool) (update Update, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			logger.Error("%v", e)
+			err = fmt.Errorf("parseStruct panic: %v", e)
 		}
 	}()
 	
