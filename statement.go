@@ -55,7 +55,7 @@ func (stmt *Statement) Parse() (tx *DB) {
 	// assign value values
 	if stmt.value != nil {
 		stmt.reflectValue = reflect.ValueOf(stmt.value)
-		for stmt.reflectValue.Kind() == reflect.Ptr {
+		for stmt.reflectValue.Kind() == reflect.Pointer {
 			if stmt.reflectValue.IsNil() && stmt.reflectValue.CanAddr() {
 				stmt.reflectValue.Set(reflect.New(stmt.reflectValue.Type().Elem()))
 			}

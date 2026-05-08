@@ -118,7 +118,7 @@ func (db *DB) Take(val any, where ...any) (tx *DB) {
 }
 
 // Create insert the value into dbname
-func (db *DB) Create(value interface{}) (tx *DB) {
+func (db *DB) Create(value any) (tx *DB) {
 	tx = db.getInstance()
 	tx.stmt.value = value
 	return tx.callbacks.Create().Execute(tx)
@@ -152,7 +152,7 @@ func (db *DB) Update(values any, conds ...any) (tx *DB) {
 }
 
 // Updates 更新多列
-// Updates 方法支持 struct 和 map[string]interface{} 参数。当使用 struct 更新时，默认情况下只会更新非零值的字段
+// Updates 方法支持 struct 和 map[string]any 参数。当使用 struct 更新时，默认情况下只会更新非零值的字段
 // 如果您想要在更新时选择、忽略某些字段，您可以使用 Select、Omit
 // 自动关闭 updateAndModify
 func (db *DB) Updates(values any, conds ...any) (tx *DB) {
@@ -171,14 +171,14 @@ func (db *DB) Updates(values any, conds ...any) (tx *DB) {
 // db.model(&User).delete([]int{1,2,3}) 匹配 _id IN (1,2,3)
 // db.model(&User).delete("name = ?","myname") 匹配 name=myname
 // db.delete(&User{Id:1}) 根据结构体中的_id字段删除记录
-func (db *DB) Delete(conds ...interface{}) (tx *DB) {
+func (db *DB) Delete(conds ...any) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
 		// 检查第一个参数是否为结构体或指针，设置为model以解析表名
 		val := conds[0]
 		valType := reflect.TypeOf(val)
 		if valType != nil {
-			if valType.Kind() == reflect.Ptr {
+			if valType.Kind() == reflect.Pointer {
 				valType = valType.Elem()
 			}
 			if valType.Kind() == reflect.Struct {
@@ -194,7 +194,7 @@ func (db *DB) Delete(conds ...interface{}) (tx *DB) {
 }
 
 // Count 统计文档数,count 必须为一个指向数字的指针  *int *int32 *int64
-func (db *DB) Count(count interface{}, conds ...interface{}) (tx *DB) {
+func (db *DB) Count(count any, conds ...any) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
 		tx = tx.Where(conds[0], conds[1:]...)

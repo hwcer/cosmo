@@ -23,7 +23,7 @@ func cmdCreate(tx *DB, client *mongo.Client) (err error) {
 		}
 	case reflect.Array, reflect.Slice:
 		opts := options.InsertMany()
-		var documents []interface{}
+		var documents []any
 		for i := 0; i < tx.stmt.reflectValue.Len(); i++ {
 			documents = append(documents, tx.stmt.reflectValue.Index(i).Interface())
 		}
@@ -108,6 +108,10 @@ func cmdPage(tx *DB, client *mongo.Client) (err error) {
 		paging.Result(int(val))
 	}
 
+	if paging.Page > paging.Total {
+		return
+	}
+
 	order := stmt.Order()
 	opts := options.Find()
 	if stmt.Paging.Size > 0 {
@@ -130,7 +134,7 @@ func cmdPage(tx *DB, client *mongo.Client) (err error) {
 		return
 	}
 
-	if reflectRows.Kind() == reflect.Ptr {
+	if reflectRows.Kind() == reflect.Pointer {
 		err = cursor.All(stmt.Context, paging.Rows)
 	} else {
 		err = cursor.All(stmt.Context, &paging.Rows)

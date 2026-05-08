@@ -7,7 +7,7 @@ import (
 // Paging 分页
 type Paging struct {
 	//order  []bson.E    //排序
-	Rows   interface{} `json:"rows"`
+	Rows   any `json:"rows"`
 	Page   int         `json:"page"`             //当前页
 	Size   int         `json:"size"`             //每页大小
 	Total  int         `json:"total"`            //总页码数
@@ -64,10 +64,7 @@ func (this *Paging) Range(page int, handle func(int)) {
 	if s >= this.Record {
 		return
 	}
-	e := s + this.Size
-	if e > this.Record {
-		e = this.Record
-	}
+	e := min(s+this.Size, this.Record)
 	for i := s; i < e; i++ {
 		handle(i)
 	}

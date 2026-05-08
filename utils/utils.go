@@ -2,15 +2,16 @@ package utils
 
 import (
 	"database/sql/driver"
-
 	"fmt"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"reflect"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 var gormSourceDir string
@@ -21,7 +22,7 @@ func init() {
 	gormSourceDir = regexp.MustCompile(`utils.utils\.go`).ReplaceAllString(file, "")
 }
 
-func ToBson(i interface{}) (bson.M, error) {
+func ToBson(i any) (bson.M, error) {
 	switch v := i.(type) {
 	case map[string]any:
 		return v, nil
@@ -32,7 +33,7 @@ func ToBson(i interface{}) (bson.M, error) {
 	}
 }
 
-func ValueOf(i interface{}) reflect.Value {
+func ValueOf(i any) reflect.Value {
 	value, ok := i.(reflect.Value)
 	if !ok {
 		value = reflect.ValueOf(i)
@@ -40,10 +41,10 @@ func ValueOf(i interface{}) reflect.Value {
 	return value
 }
 
-func ToArray(v interface{}) (r []interface{}) {
+func ToArray(v any) (r []any) {
 	vf := reflect.Indirect(reflect.ValueOf(v))
 	if vf.Kind() != reflect.Array && vf.Kind() != reflect.Slice {
-		return []interface{}{v}
+		return []any{v}
 	}
 	for i := 0; i < vf.Len(); i++ {
 		r = append(r, vf.Index(i).Interface())
@@ -78,7 +79,7 @@ func CheckTruth(vals ...string) bool {
 	return false
 }
 
-func ToStringKey(values ...interface{}) string {
+func ToStringKey(values ...any) string {
 	results := make([]string, len(values))
 
 	for idx, value := range values {
@@ -102,15 +103,10 @@ func ToStringKey(values ...interface{}) string {
 }
 
 func Contains(elems []string, elem string) bool {
-	for _, e := range elems {
-		if elem == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(elems, elem)
 }
 
-func AssertEqual(src, dst interface{}) bool {
+func AssertEqual(src, dst any) bool {
 	if !reflect.DeepEqual(src, dst) {
 		if valuer, ok := src.(driver.Valuer); ok {
 			src, _ = valuer.Value()
@@ -125,7 +121,7 @@ func AssertEqual(src, dst interface{}) bool {
 	return true
 }
 
-func ToString(value interface{}) string {
+func ToString(value any) string {
 	switch v := value.(type) {
 	case string:
 		return v

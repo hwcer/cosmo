@@ -88,7 +88,7 @@ func (db *DB) Select(columns ...string) (tx *DB) {
 
 // Where 查询条件
 // 参考 query包
-func (db *DB) Where(query interface{}, args ...interface{}) (tx *DB) {
+func (db *DB) Where(query any, args ...any) (tx *DB) {
 	tx = db.getInstance()
 	tx.stmt.Clause.Where(query, args...)
 	return
@@ -119,7 +119,7 @@ func (db *DB) Limit(limit int) (tx *DB) {
 // SetColumn set column's value to model
 //
 //	stmt.SetColumn("Name", "jinzhu") // Hooks Method
-func (db *DB) SetColumn(data map[string]interface{}) (err error) {
+func (db *DB) SetColumn(data map[string]any) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("%v", e)

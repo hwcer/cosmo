@@ -14,7 +14,7 @@ import (
 // AutoMigrator 自动迁移功能，根据模型定义自动创建或更新索引
 // dst: 要迁移的模型对象，可以传入多个模型
 // 返回值: 迁移过程中发生的错误
-func (db *DB) AutoMigrator(dst ...interface{}) error {
+func (db *DB) AutoMigrator(dst ...any) error {
 	for _, mod := range dst {
 		// 解析模型获取元数据
 		sch, err := schema.Parse(mod)
@@ -33,7 +33,7 @@ func (db *DB) AutoMigrator(dst ...interface{}) error {
 	return nil
 }
 
-func (db *DB) indexes(model interface{}, index *schema.Index) (err error) {
+func (db *DB) indexes(model any, index *schema.Index) (err error) {
 	tx, coll := db.Collection(model)
 	if tx.Error != nil {
 		return tx.Error

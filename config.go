@@ -11,6 +11,6 @@ type Config struct {
 }
 
 // Register 预注册的MODEL在启动时会自动创建索引
-func (c *Config) Register(model interface{}) {
+func (c *Config) Register(model any) {
 	c.models = append(c.models, model)
 }

@@ -159,7 +159,7 @@ func (q *Query) formClause(query string, args []any) {
 
 	// 解析每个条件片段
 	for _, pair := range arr {
-		var v interface{}
+		var v any
 		// 如果条件片段包含"?"占位符，使用args中的参数替换
 		if strings.Contains(pair, "?") && argIndex < len(args) {
 			v = args[argIndex]
@@ -241,7 +241,7 @@ func (q *Query) Where(format any, cons ...any) {
 // 参数 w: 条件操作符（如=, !=, >等）
 // 参数 v: 条件值（用于替换"?"占位符）
 // 返回值: 解析后的条件节点，包含字段名、操作符类型和值
-func parseWherePair(pair string, w string, v interface{}) *Node {
+func parseWherePair(pair string, w string, v any) *Node {
 	// 将条件对字符串按操作符拆分为字段名和值两部分
 	arr := strings.Split(pair, w)
 	if len(arr) != 2 {
@@ -255,7 +255,7 @@ func parseWherePair(pair string, w string, v interface{}) *Node {
 	// 提取并清理字段名
 	node.k = strings.Trim(arr[0], sqlConditionSplit)
 
-	var r interface{}
+	var r any
 	// 提取并清理值部分
 	r = strings.Trim(arr[1], sqlConditionSplit)
 	// 如果值是"?"占位符，则使用传入的参数值替换

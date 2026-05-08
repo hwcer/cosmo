@@ -2,6 +2,7 @@ package clause
 
 import (
 	"encoding/json"
+	"maps"
 	"strings"
 
 	"github.com/hwcer/cosmo/utils"
@@ -28,7 +29,7 @@ type Filter bson.M
 // filter.Match("or", bson.M{"name": "John"})
 // filter.Match("or", bson.M{"name": "Jane"})
 // // 结果: { "$or": [{ "name": "John" }, { "name": "Jane" }] }
-func (this Filter) Match(t string, v interface{}) {
+func (this Filter) Match(t string, v any) {
 	if !strings.HasPrefix(t, "$") {
 		t = "$" + t
 	}
@@ -36,7 +37,7 @@ func (this Filter) Match(t string, v interface{}) {
 	if x, ok := this[t]; !ok {
 		this[t] = arr
 	} else {
-		s, _ := x.([]interface{})
+		s, _ := x.([]any)
 		this[t] = append(s, arr...)
 	}
 }
@@ -47,7 +48,7 @@ func (this Filter) Match(t string, v interface{}) {
 // 使用示例：
 // filter := clause.Filter{}
 // filter.Primary("5f7d8e9a0b1c2d3e4f5a6b7c") // 结果: { "_id": "5f7d8e9a0b1c2d3e4f5a6b7c" }
-func (this Filter) Primary(v interface{}) {
+func (this Filter) Primary(v any) {
 	this.Eq(MongoPrimaryName, v)
 }
 
@@ -62,7 +63,7 @@ func (this Filter) Primary(v interface{}) {
 // filter := clause.Filter{}
 // filter.Any("gt", "age", 18) // 结果: { "age": { "$gt": 18 } }
 // filter.Any("in", "status", []string{"active", "pending"}) // 结果: { "status": { "$in": ["active", "pending"] } }
-func (this Filter) Any(t, k string, v interface{}) {
+func (this Filter) Any(t, k string, v any) {
 	if !strings.HasPrefix(t, "$") {
 		t = "$" + t
 	}
@@ -73,7 +74,7 @@ func (this Filter) Any(t, k string, v interface{}) {
 		this[k] = data
 	} else if data, err = utils.ToBson(old); err != nil {
 		data = bson.M{}
-		data["$in"] = []interface{}{old}
+		data["$in"] = []any{old}
 		this[k] = data
 	}
 	if operationArray[t] {
@@ -81,7 +82,7 @@ func (this Filter) Any(t, k string, v interface{}) {
 		if x, ok := data[t]; !ok {
 			data[t] = arr
 		} else {
-			s, _ := x.([]interface{})
+			s, _ := x.([]any)
 			data[t] = append(s, arr...)
 		}
 	} else {
@@ -98,7 +99,7 @@ func (this Filter) Any(t, k string, v interface{}) {
 // filter := clause.Filter{}
 // filter.Eq("name", "John") // 结果: { "name": "John" }
 // filter.Eq("name", "Jane") // 结果: { "name": { "$in": ["John", "Jane"] } }
-func (this Filter) Eq(k string, v interface{}) {
+func (this Filter) Eq(k string, v any) {
 	if _, ok := this[k]; !ok {
 		this[k] = v
 	} else {
@@ -113,7 +114,7 @@ func (this Filter) Eq(k string, v interface{}) {
 // 使用示例：
 // filter := clause.Filter{}
 // filter.Gt("age", 18) // 结果: { "age": { "$gt": 18 } }
-func (this Filter) Gt(k string, v interface{}) {
+func (this Filter) Gt(k string, v any) {
 	this.Any("$gt", k, v)
 }
 
@@ -124,54 +125,54 @@ func (this Filter) Gt(k string, v interface{}) {
 // 使用示例：
 // filter := clause.Filter{}
 // filter.Gte("age", 18) // 结果: { "age": { "$gte": 18 } }
-func (this Filter) Gte(k string, v interface{}) {
+func (this Filter) Gte(k string, v any) {
 	this.Any("$gte", k, v)
 }
 
 // Lt 小于（<）
-func (this Filter) Lt(k string, v interface{}) {
+func (this Filter) Lt(k string, v any) {
 	this.Any("$lt", k, v)
 }
 
 // Lte 小于等于（<=）
-func (this Filter) Lte(k string, v interface{}) {
+func (this Filter) Lte(k string, v any) {
 	this.Any("$lte", k, v)
 }
 
 // Ne 不等于（!=）
-func (this Filter) Ne(k string, v interface{}) {
+func (this Filter) Ne(k string, v any) {
 	this.Any("$ne", k, v)
 }
 
 // In The $in operator selects the documents where the value of a field equals any value in the specified array
-func (this Filter) In(k string, v interface{}) {
+func (this Filter) In(k string, v any) {
 	this.Any("$in", k, v)
 }
 
 // Nin selects the documents where: the field value is not in the specified array or the field does not exist.
-func (this Filter) Nin(k string, v ...interface{}) {
+func (this Filter) Nin(k string, v ...any) {
 	this.Any("$nin", k, v)
 }
 
 // OR The $or operator performs a logical OR operation on an array of two or more <expressions> and selects the documents that satisfy at least one of the <expressions>.
-func (this Filter) OR(v interface{}) {
+func (this Filter) OR(v any) {
 	this.Match("$or", v)
 }
 
 // NOT $not performs a logical NOT operation on the specified <operator-expression> and selects the documents that do not match the <operator-expression>.
 // This includes documents that do not contain the field.
-func (this Filter) NOT(v interface{}) {
+func (this Filter) NOT(v any) {
 	this.Match("$not", v)
 }
 
 // AND $and performs a logical AND operation on an array of one or more expressions (e.g. <expression1>, <expression2>, etc.) and selects the documents that satisfy all the expressions in the array.
 // The $and operator uses short-circuit evaluation. If the first expression (e.g. <expression1>) evaluates to false, MongoDB will not evaluate the remaining expressions.
-func (this Filter) AND(v interface{}) {
+func (this Filter) AND(v any) {
 	this.Match("$and", v)
 }
 
 // NOR $nor performs a logical NOR operation on an array of one or more query expression and selects the documents that fail all the query expressions in the array.
-func (this Filter) NOR(v interface{}) {
+func (this Filter) NOR(v any) {
 	this.Match("$nor", v)
 }
 
@@ -179,9 +180,7 @@ func (this Filter) NOR(v interface{}) {
 // 设计说明：查询中不存在同一字段既等于 A 又等于 B 的合理场景，
 // 同字段多条件应使用操作符（$gt/$lt）或 $and 组合，不应通过多次 Merge 同名 key 实现。
 func (this Filter) Merge(src Filter) {
-	for k, v := range src {
-		this[k] = v
-	}
+	maps.Copy(this, src)
 }
 
 func (this Filter) Marshal() ([]byte, error) {

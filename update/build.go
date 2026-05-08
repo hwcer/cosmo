@@ -78,7 +78,7 @@ func BuildWithStmt(stmt iStmt) (update Update, upsert bool, err error) {
 // 参数 desc: Map类型的值
 // 参数 sch: 模型schema，用于字段名映射
 // 返回值: Update实例和可能的错误
-func parseMap(desc interface{}, sch *schema.Schema) (update Update, err error) {
+func parseMap(desc any, sch *schema.Schema) (update Update, err error) {
 	switch v := desc.(type) {
 	case Update:
 		update = v
@@ -107,7 +107,7 @@ func parseMap(desc interface{}, sch *schema.Schema) (update Update, err error) {
 // 参数 filter: 字段选择器，用于指定要更新的字段
 // 参数 includeZeroValue: 是否包含零值字段
 // 返回值: Update实例和可能的错误
-func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schema, filter *Selector, includeZeroValue bool) (update Update, err error) {
+func parseStruct(desc any, reflectValue reflect.Value, sch *schema.Schema, filter *Selector, includeZeroValue bool) (update Update, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("parseStruct panic: %v", e)
@@ -144,7 +144,7 @@ func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schem
 	
 	// 如果结构体实现了SetOnInsert接口，处理插入时的字段设置
 	if s, ok := desc.(SetOnInsert); ok {
-		var v map[string]interface{}
+		var v map[string]any
 		if v, err = s.SetOnInsert(); err == nil && len(v) > 0 {
 			update[UpdateTypeSetOnInsert] = v
 		}
@@ -158,8 +158,8 @@ func parseStruct(desc interface{}, reflectValue reflect.Value, sch *schema.Schem
 // 参数 data: SetOnInsert的字段映射
 // 参数 update: Update实例，包含其他更新操作
 // 返回值: 过滤后的SetOnInsert字段映射
-func filterSetOnInsert(data map[string]interface{}, update Update) map[string]interface{} {
-	r := map[string]interface{}{}
+func filterSetOnInsert(data map[string]any, update Update) map[string]any {
+	r := map[string]any{}
 	keys := update.Projection()
 	for k, v := range data {
 		if _, ok := keys[k]; !ok {

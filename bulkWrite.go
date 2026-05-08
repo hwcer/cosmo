@@ -84,7 +84,7 @@ func (this *BulkWrite) Update(data any, where ...any) {
 	this.update(data, where, false)
 }
 
-func (this *BulkWrite) Insert(documents ...interface{}) {
+func (this *BulkWrite) Insert(documents ...any) {
 	for _, doc := range documents {
 		model := mongo.NewInsertOneModel()
 		model.SetDocument(doc)
@@ -92,7 +92,7 @@ func (this *BulkWrite) Insert(documents ...interface{}) {
 	}
 }
 
-func (this *BulkWrite) Delete(where ...interface{}) {
+func (this *BulkWrite) Delete(where ...any) {
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
 	filter := query.Build(this.tx.stmt.schema)
@@ -138,7 +138,7 @@ func (this *BulkWrite) String() string {
 		}
 	}
 
-	opts := map[string]interface{}{}
+	opts := map[string]any{}
 	opts["Database"] = this.tx.dbname
 	opts["Collection"] = this.tx.stmt.table
 	opts["Operation"] = logs

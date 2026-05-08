@@ -62,16 +62,14 @@ func New(configs ...*Config) (db *DB) {
 // 或
 // pool := cosmo.NewPoolManager("mongodb://localhost:27017")
 // err := db.Start("mydatabase", pool)
-func (db *DB) Start(dbname string, address interface{}) (err error) {
+func (db *DB) Start(dbname string, address any) (err error) {
 	db.dbname = dbname
-	var uri string
-	switch address.(type) {
+	switch v := address.(type) {
 	case string:
-		uri = address.(string)
-		db.Config.pool = health.New(uri)
+		db.Config.pool = health.New(v)
 		db.Config.pool.Start()
 	case *health.Manager:
-		db.Config.pool = address.(*health.Manager)
+		db.Config.pool = v
 		db.Config.pool.Start()
 	default:
 		err = errors.New("address error")
@@ -148,9 +146,9 @@ func (db *DB) Database(dbname string) *DB {
 // 或
 // tx, coll := db.Collection("users")
 func (db *DB) Collection(model any) (tx *DB, coll *mongo.Collection) {
-	switch model.(type) {
+	switch v := model.(type) {
 	case string:
-		tx = db.Table(model.(string))
+		tx = db.Table(v)
 	default:
 		tx = db.Model(model)
 	}
@@ -206,7 +204,7 @@ func (db *DB) WithContext(ctx context.Context) *DB {
 //
 // 使用示例：
 // db.Errorf("操作失败: %v", err)
-func (db *DB) Errorf(format interface{}, args ...interface{}) *DB {
+func (db *DB) Errorf(format any, args ...any) *DB {
 	switch v := format.(type) {
 	case string:
 		db.Error = fmt.Errorf(v, args...)

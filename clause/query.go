@@ -82,7 +82,7 @@ func (q *Query) Len() (r int) {
 // query.Primary("5f7d8e9a0b1c2d3e4f5a6b7c") // 单个主键值
 // 或
 // query.Primary([]string{"id1", "id2", "id3"}) // 多个主键值
-func (q *Query) Primary(v interface{}) {
+func (q *Query) Primary(v any) {
 	q.Eq(MongoPrimaryName, v)
 }
 
@@ -91,7 +91,7 @@ func (q *Query) Primary(v interface{}) {
 // 参数 k 是字段名
 // 参数 v 是比较值
 // 如果操作符类型不是以 $ 开头，会自动添加 $ 前缀。
-func (q *Query) any(t, k string, v interface{}) {
+func (q *Query) any(t, k string, v any) {
 	if !strings.HasPrefix(t, QueryOperationPrefix) {
 		t = QueryOperationPrefix + t
 	}
@@ -114,7 +114,7 @@ func (q *Query) match(t string, v ...*Node) {
 // 使用示例：
 // query := clause.New()
 // query.Eq("name", "John") // { "name": "John" }
-func (q *Query) Eq(k string, v interface{}) {
+func (q *Query) Eq(k string, v any) {
 	q.any("", k, v)
 }
 
@@ -125,7 +125,7 @@ func (q *Query) Eq(k string, v interface{}) {
 // 使用示例：
 // query := clause.New()
 // query.Gt("age", 18) // { "age": { "$gt": 18 } }
-func (q *Query) Gt(k string, v interface{}) {
+func (q *Query) Gt(k string, v any) {
 	q.any("$gt", k, v)
 }
 
@@ -136,7 +136,7 @@ func (q *Query) Gt(k string, v interface{}) {
 // 使用示例：
 // query := clause.New()
 // query.Gte("age", 18) // { "age": { "$gte": 18 } }
-func (q *Query) Gte(k string, v interface{}) {
+func (q *Query) Gte(k string, v any) {
 	q.any("$gte", k, v)
 }
 
@@ -147,7 +147,7 @@ func (q *Query) Gte(k string, v interface{}) {
 // 使用示例：
 // query := clause.New()
 // query.Lt("age", 30) // { "age": { "$lt": 30 } }
-func (q *Query) Lt(k string, v interface{}) {
+func (q *Query) Lt(k string, v any) {
 	q.any("$lt", k, v)
 }
 
@@ -158,7 +158,7 @@ func (q *Query) Lt(k string, v interface{}) {
 // 使用示例：
 // query := clause.New()
 // query.Lte("age", 30) // { "age": { "$lte": 30 } }
-func (q *Query) Lte(k string, v interface{}) {
+func (q *Query) Lte(k string, v any) {
 	q.any("$lte", k, v)
 }
 
@@ -169,7 +169,7 @@ func (q *Query) Lte(k string, v interface{}) {
 // 使用示例：
 // query := clause.New()
 // query.Ne("name", "John") // { "name": { "$ne": "John" } }
-func (q *Query) Ne(k string, v interface{}) {
+func (q *Query) Ne(k string, v any) {
 	q.any("$ne", k, v)
 }
 
@@ -180,7 +180,7 @@ func (q *Query) Ne(k string, v interface{}) {
 // 使用示例：
 // query := clause.New()
 // query.In("status", []string{"active", "pending"}) // { "status": { "$in": ["active", "pending"] } }
-func (q *Query) In(k string, v interface{}) {
+func (q *Query) In(k string, v any) {
 	q.any("$in", k, v)
 }
 
@@ -191,7 +191,7 @@ func (q *Query) In(k string, v interface{}) {
 // 使用示例：
 // query := clause.New()
 // query.Nin("status", []string{"inactive", "deleted"}) // { "status": { "$nin": ["inactive", "deleted"] } }
-func (q *Query) Nin(k string, v interface{}) {
+func (q *Query) Nin(k string, v any) {
 	q.any("$nin", k, v)
 }
 

@@ -2,6 +2,7 @@ package update
 
 import (
 	"encoding/json"
+	"maps"
 	"strings"
 
 	"github.com/hwcer/cosgo/schema"
@@ -77,21 +78,21 @@ func (u Update) Remove(opt string, k string) {
 // Set 设置字段值（$set操作）
 // 参数 k: 字段名
 // 参数 v: 字段值
-func (u Update) Set(k string, v interface{}) {
+func (u Update) Set(k string, v any) {
 	u.Any(UpdateTypeSet, k, v)
 }
 
 // SetOnInsert 仅在插入时设置字段值（$setOnInsert操作）
 // 参数 k: 字段名
 // 参数 v: 字段值
-func (u Update) SetOnInsert(k string, v interface{}) {
+func (u Update) SetOnInsert(k string, v any) {
 	u.Any(UpdateTypeSetOnInsert, k, v)
 }
 
 // Inc 增加/减少字段值（$inc操作）
 // 参数 k: 字段名
 // 参数 v: 增加/减少的值（正数增加，负数减少）
-func (u Update) Inc(k string, v interface{}) {
+func (u Update) Inc(k string, v any) {
 	u.Any(UpdateTypeInc, k, v)
 }
 
@@ -99,7 +100,7 @@ func (u Update) Inc(k string, v interface{}) {
 // 仅当新值小于当前值时才更新
 // 参数 k: 字段名
 // 参数 v: 比较值
-func (u Update) Min(k string, v interface{}) {
+func (u Update) Min(k string, v any) {
 	u.Any("$min", k, v)
 }
 
@@ -107,7 +108,7 @@ func (u Update) Min(k string, v interface{}) {
 // 仅当新值大于当前值时才更新
 // 参数 k: 字段名
 // 参数 v: 比较值
-func (u Update) Max(k string, v interface{}) {
+func (u Update) Max(k string, v any) {
 	u.Any("$max", k, v)
 }
 
@@ -120,21 +121,21 @@ func (u Update) Unset(k string) {
 // Pop 从数组中删除元素（$pop操作）
 // 参数 k: 字段名
 // 参数 v: 1表示删除最后一个元素，-1表示删除第一个元素
-func (u Update) Pop(k string, v interface{}) {
+func (u Update) Pop(k string, v any) {
 	u.Any("$pop", k, v)
 }
 
 // Pull 从数组中删除匹配的元素（$pull操作）
 // 参数 k: 字段名
 // 参数 v: 匹配条件
-func (u Update) Pull(k string, v interface{}) {
+func (u Update) Pull(k string, v any) {
 	u.Any("$pull", k, v)
 }
 
 // Push 向数组中添加元素（$push操作）
 // 参数 k: 字段名
 // 参数 v: 要添加的元素
-func (u Update) Push(k string, v interface{}) {
+func (u Update) Push(k string, v any) {
 	u.Any("$push", k, v)
 }
 
@@ -142,7 +143,7 @@ func (u Update) Push(k string, v interface{}) {
 // 参数 t: 更新操作类型（如$set, $inc）
 // 参数 k: 字段名
 // 参数 v: 字段值
-func (u Update) Any(t, k string, v interface{}) {
+func (u Update) Any(t, k string, v any) {
 	if !strings.HasPrefix(t, "$") {
 		t = "$" + t
 	}
@@ -158,9 +159,7 @@ func (u Update) Save(vs map[string]any) {
 	if _, ok := u[UpdateTypeSet]; !ok {
 		u[UpdateTypeSet] = vs
 	} else {
-		for k, v := range vs {
-			u[UpdateTypeSet][k] = v
-		}
+		maps.Copy(u[UpdateTypeSet], vs)
 	}
 }
 
@@ -168,7 +167,7 @@ func (u Update) Save(vs map[string]any) {
 // 参数 t: 更新操作类型
 // 参数 i: 结构体实例
 // 返回值: 转换过程中的错误
-func (u Update) Convert(t string, i interface{}) error {
+func (u Update) Convert(t string, i any) error {
 	values, err := utils.ToBson(i)
 	if err != nil {
 		return err
@@ -179,9 +178,7 @@ func (u Update) Convert(t string, i interface{}) error {
 	if _, ok := u[t]; !ok {
 		u[t] = bson.M{}
 	}
-	for k, v := range values {
-		u[t][k] = v
-	}
+	maps.Copy(u[t], values)
 	return nil
 }
 
@@ -197,7 +194,7 @@ func (u Update) String() string {
 func (u Update) Projection() bson.M {
 	p := make(bson.M)
 	for _, m := range projectionField {
-		for k, _ := range u[m] {
+		for k := range u[m] {
 			p[k] = 1
 		}
 	}

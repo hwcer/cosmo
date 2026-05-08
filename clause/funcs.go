@@ -16,7 +16,7 @@ func Multiple(query Filter) bool {
 		return true
 	}
 	switch v.(type) {
-	case map[string]interface{}, bson.M:
+	case map[string]any, bson.M:
 		return true
 	}
 	return false

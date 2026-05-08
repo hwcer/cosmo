@@ -9,5 +9,5 @@ type executeDone func(db *DB) error
 type executeHandle func(db *DB, client *mongo.Client) error
 
 type Cursor interface {
-	Decode(val interface{}) error
+	Decode(val any) error
 }
