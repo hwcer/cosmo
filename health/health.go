@@ -355,7 +355,7 @@ func (m *Manager) tryRecover() {
 			// 连接池状态检查失败不是致命错误，仅记录警告
 			logger.Debug("连接池状态检查失败 (尝试 %d/%d): %v", attempt+1, maxRetries+1, err)
 		} else {
-			logger.Debug("新连接服务器状态: %v", serverStatus)
+			logger.Debug("新连接服务器状态: version=%v, uptime=%v, connections=%v", serverStatus["version"], serverStatus["uptime"], serverStatus["connections"])
 		}
 
 		// 连接成功
