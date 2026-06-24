@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/hwcer/cosmo/health"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -183,6 +184,16 @@ func (db *DB) BulkWrite(model any, filter ...BulkWriteUpdateFilter) *BulkWrite {
 		bw.SetUpdateFilter(modelBulkWriteFilter.BulkWriteFilter)
 	}
 	return bw
+}
+
+// BulkWrite8 创建跨集合批量写入实例，需要 MongoDB 8.0+
+// 通过 client.BulkWrite() 实现，支持多个集合的操作在一次请求中原子提交
+func (db *DB) BulkWrite8() *BulkWrite8 {
+	return &BulkWrite8{
+		tx:      db.getInstance(),
+		ctx:     context.Background(),
+		schemas: make(map[reflect.Type]*bulkWrite8Schema),
+	}
 }
 
 // WithContext 为当前数据库实例设置新的上下文。

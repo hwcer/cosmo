@@ -84,6 +84,15 @@ func (this *BulkWrite) Update(data any, where ...any) {
 	this.update(data, where, false)
 }
 
+// Unset 移除文档字段（$unset操作）
+func (this *BulkWrite) Unset(keys []string, where ...any) {
+	up := update.New()
+	for _, k := range keys {
+		up.Unset(k)
+	}
+	this.update(up, where, false)
+}
+
 func (this *BulkWrite) Insert(documents ...any) {
 	for _, doc := range documents {
 		model := mongo.NewInsertOneModel()
