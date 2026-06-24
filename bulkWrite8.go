@@ -85,24 +85,7 @@ func (bw8 *BulkWrite8) Save(model any, data any, where ...any) {
 	bw8.update(model, data, where, true)
 }
 
-// Unset 移除文档字段（$unset操作）
-func (bw8 *BulkWrite8) Unset(model any, keys []string, where ...any) {
-	table, sch, err := bw8.resolve(model)
-	if err != nil {
-		bw8.Error = err
-		return
-	}
-	query := clause.New()
-	query.Where(where[0], where[1:]...)
-	up := update.New()
-	for _, k := range keys {
-		up.Unset(k)
-	}
-	m := mongo.NewClientUpdateOneModel().SetFilter(query.Build(sch)).SetUpdate(up)
-	bw8.writes = append(bw8.writes, mongo.ClientBulkWrite{
-		Database: bw8.tx.dbname, Collection: table, Model: m,
-	})
-}
+
 
 // Insert 添加插入操作
 func (bw8 *BulkWrite8) Insert(model any, documents ...any) {
