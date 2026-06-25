@@ -136,14 +136,13 @@ func (bw8 *BulkWrite8) Submit() error {
 	if len(bw8.opts) == 0 {
 		bw8.opts = append(bw8.opts, options.ClientBulkWrite().SetOrdered(false))
 	}
-	bw8.tx = bw8.tx.callbacks.Call(bw8.tx, func(db *DB, client *mongo.Client) error {
+	return bw8.tx.pool.Execute(bw8.ctx, func(client *mongo.Client) error {
 		var err error
 		if bw8.result, err = client.BulkWrite(bw8.ctx, bw8.writes, bw8.opts...); err == nil {
 			bw8.writes = nil
 		}
 		return err
 	})
-	return bw8.tx.Error
 }
 
 // Result 获取上一次 Submit 的结果
