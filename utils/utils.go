@@ -29,6 +29,16 @@ func ToBson(i any) (bson.M, error) {
 	case bson.M:
 		return v, nil
 	default:
+		rv := reflect.ValueOf(i)
+		if rv.Kind() == reflect.Map && rv.Type().Key().Kind() == reflect.String {
+			_, file, line, _ := runtime.Caller(1)
+			fmt.Printf("[cosmo] ToBson: 性能警告，类型 %T 应显式转换为 map[string]any (%s:%d)\n", i, file, line)
+			m := make(bson.M, rv.Len())
+			for _, key := range rv.MapKeys() {
+				m[key.String()] = rv.MapIndex(key).Interface()
+			}
+			return m, nil
+		}
 		return nil, fmt.Errorf("cosmo.update ToBson convert error:%v", i)
 	}
 }
