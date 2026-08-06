@@ -90,8 +90,14 @@ func (this *Selector) Projection(sch *schema.Schema) map[string]bool {
 	for k, v := range this.projection {
 		db := k
 		if sch != nil {
-			if field := sch.LookUpField(k); field != nil {
-				db = field.DBName()
+			//与 Update.Transform 同一套换名：逐段处理，含 "." 的多级路径也要把字段段换成
+			//落库名。旧实现只查单段（LookUpField 对 "a.b" 必然返回 nil），带点的 key
+			//原样进投影 —— 大小写不符就投影到一个不存在的字段，那一段数据静默读不出来。
+			//
+			//这里不报错、退回原 key：投影出错只是少读一个字段，比写错字段轻得多，
+			//而 5 个调用点都没有 error 通道。真正的把关在 Transform 那侧。
+			if name, err := sch.DBName(k); err == nil {
+				db = name
 			}
 		}
 		r[db] = v

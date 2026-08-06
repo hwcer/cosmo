@@ -2,6 +2,7 @@ package update
 
 import (
 	"encoding/json"
+	"fmt"
 	"maps"
 	"strings"
 
@@ -204,23 +205,29 @@ func (u Update) Projection() bson.M {
 // Transform 将结构体字段名转换为数据库字段名
 // 参数 sch: 模型schema
 // 返回值: 转换后的Update实例
-func (u Update) Transform(sch *schema.Schema) Update {
+// 🔴 这里是整条写链路上**最后一次**能把字段名换成落库名的地方，上游（如 updater）
+// 交过来的可能是 Go 名 / json 名。旧实现有两个洞，都是静默的：
+//
+//	① 含 "." 的多级路径原样下发、不查 schema —— 大小写不符就往库里插一个野字段，
+//	   真正的字段纹丝不动，没有任何报错；
+//	② 单段 key 查不到字段时既不转换也不保留，连键带值直接消失（else 分支根本不存在）。
+//
+// 现在统一走 schema.DBName：它逐段换名（字段段查 schema，map 键与 slice 下标原样保留），
+// 解析不出来就报错。宁可让这次写入失败，也不要把数据写到错误的字段上。
+func (u Update) Transform(sch *schema.Schema) (Update, error) {
 	r := Update{}
 	for _, t := range []string{UpdateTypeSet, UpdateTypeInc, UpdateTypeUnset, UpdateTypeSetOnInsert} {
 		if m, ok := u[t]; ok {
 			d := bson.M{}
 			for k, v := range m {
-				// 如果字段名包含点号，直接使用
-				if strings.Contains(k, MongodbFieldSplit) {
-					d[k] = v
-					// 否则使用schema转换字段名
-				} else if field := sch.LookUpField(k); field != nil {
-					db := field.DBName()
-					d[db] = v
+				db, err := sch.DBName(k)
+				if err != nil {
+					return nil, fmt.Errorf("update transform %s: %w", t, err)
 				}
+				d[db] = v
 			}
 			r[t] = d
 		}
 	}
-	return r
+	return r, nil
 }

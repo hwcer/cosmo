@@ -94,7 +94,7 @@ func parseMap(desc any, sch *schema.Schema) (update Update, err error) {
 		return
 	}
 	if sch != nil {
-		return update.Transform(sch), nil
+		return update.Transform(sch)
 	} else {
 		return update, nil
 	}
