@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo/health"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -16,11 +17,11 @@ import (
 // DB 是 Cosmo ORM 框架的核心结构体，提供了数据库操作的入口点。
 // 它封装了数据库连接、事务管理、模型映射等功能，支持链式操作。
 type DB struct {
-	*Config                 // 数据库配置
-	stmt         *Statement // 数据库操作语句
-	clone        bool       // 是否为克隆体
-	Error        error      // 错误信息
-	RowsAffected int64      // 操作影响的条数
+	*Config                      // 数据库配置
+	stmt         *Statement      // 数据库操作语句
+	clone        bool            // 是否为克隆体
+	Error        *values.Message // 错误信息, 驱动层错误已由 NormalizeError 统一转换, 可直接读取 Code / Args; 返回给 error 类型时请使用 Err()
+	RowsAffected int64           // 操作影响的条数
 }
 
 // New 创建一个新的 Cosmo DB 实例。
@@ -208,21 +209,33 @@ func (db *DB) WithContext(ctx context.Context) *DB {
 	return db.Session(&Session{Context: ctx})
 }
 
-// Errorf 为数据库实例设置格式化错误信息。
+// Errorf 为数据库实例设置错误信息。
 // 参数 format 是错误格式化字符串或错误对象。
 // 参数 args 是格式化参数。
 // 返回值是当前 DB 实例，方便链式调用。
+// 传入 error 时经过 NormalizeError 统一转换; 传入字符串时使用默认错误码 values.MessageErrorCodeDefault。
 //
 // 使用示例：
 // db.Errorf("操作失败: %v", err)
 func (db *DB) Errorf(format any, args ...any) *DB {
 	switch v := format.(type) {
+	case error:
+		db.Error = NormalizeError(v)
 	case string:
-		db.Error = fmt.Errorf(v, args...)
+		db.Error = values.Error(fmt.Errorf(v, args...))
 	default:
-		db.Error = fmt.Errorf("%v", format)
+		db.Error = values.Error(fmt.Errorf("%v", format))
 	}
 	return db
+}
+
+// Err 以 error 接口返回当前错误，没有错误时返回 nil。
+// Error 字段类型是 *values.Message，在返回值为 error 的函数中直接 return db.Error 会得到一个非 nil 的接口，应改用 return db.Err()。
+func (db *DB) Err() error {
+	if db.Error == nil {
+		return nil
+	}
+	return db.Error
 }
 
 // getInstance 获取数据库实例的克隆体，用于避免并发操作时的状态污染。

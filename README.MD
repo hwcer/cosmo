@@ -113,6 +113,41 @@ db.Model(&User{}).Where("age > ?", 18).Range(func(cursor cosmo.Cursor) bool {
 - Statement 每个克隆体独立持有，不跨 goroutine
 - schema 缓存 ~19ns 零分配命中
 
+## 错误处理
+
+驱动层错误在返回给上层前统一经 `NormalizeError` 转换为 `*values.Message`(`DB.Error`、`BulkWrite8.Error` 字段即此类型), MongoDB 原始错误中的集合名、索引名、重复键值不会透传给客户端:
+
+| 错误类别 | Code | 文案 |
+|---------|------|------|
+| 唯一键冲突 | 11000 / 11001 / 12582 / 16460(原始码) | 固定 `duplicate key error`, 冲突字段名在 `Args` |
+| 数据类型错误 | 2 / 14 / 22(服务端原始码) | 固定 `invalid data type` |
+| 其他服务端错误 | 原始错误码 | 保留原始信息 |
+| 网络错误 / 超时 | 6 / 89 / 50 | 保留原始信息 |
+| 未知错误 | 9999(默认码) | 保留原始信息 |
+
+判断助手(对转换后的 Message、nil 的 `*values.Message`、驱动原始错误均有效, 经过 RPC JSON 序列化后依然有效):
+
+```go
+tx := db.Create(&guild)
+if msg := tx.Error; msg != nil {
+    switch {
+    case cosmo.IsDuplicateKey(msg, "_id"):   // ID 重复
+    case cosmo.IsDuplicateKey(msg, "name"):  // 公会名被占用
+    case cosmo.IsNetworkError(msg):           // 网络/超时, 可重试
+    default:
+        logger.Error("code=%d text=%s args=%v", msg.Code, msg.Error(), msg.Args)
+    }
+}
+```
+
+- `cosmo.IsDuplicateKey(err, fields...)`: 是否唯一键冲突; 传入字段名时要求全部出现在冲突键中
+- `cosmo.DuplicateKeyFields(err)`: 冲突字段名列表(按索引键顺序; 老版本 MongoDB 不含字段名时回退为索引名)
+- `cosmo.IsBusinessError(err)`: 唯一键冲突或数据类型错误, 属于不可恢复的业务错误
+- `cosmo.IsNetworkError(err)`: 网络/超时错误, 可重试
+- `db.Err()`: 以 `error` 接口返回错误; `DB.Error` 是 `*values.Message` 指针, 直接 return 给 error 会得到非 nil 的空接口
+
+注意: 转换后的 Message 不再保留驱动原始错误的 `errors.Is/As` 链, 对驱动错误类型的判断需改用 Code; 判断唯一键冲突请使用 `IsDuplicateKey`, 不要对转换结果做 `errors.Is(err, cosmo.ErrDuplicateKey)`(`values.Message` 靠 Code 比较而非指针身份)。
+
 ## 本轮修复的 Bug
 
 | Bug | 修复 |

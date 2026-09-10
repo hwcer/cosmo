@@ -45,7 +45,7 @@ func (db *DB) indexes(model any, index *schema.Index) (err error) {
 	}
 	_, err = indexView.CreateOne(context.Background(), *mongoIndex)
 	var cv mongo.CommandError
-	if errors.As(err, &cv) && cv.Code == 85 || strings.HasPrefix(cv.Message, "Index already exists with a different name") {
+	if errors.As(err, &cv) && cv.Code == CodeIndexOptionsConflict || strings.HasPrefix(cv.Message, "Index already exists with a different name") {
 		err = nil
 	}
 	return

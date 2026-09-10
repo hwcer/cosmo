@@ -178,9 +178,8 @@ func (this *Cache) Reload(ts int64, handle ...CacheHandle) error {
 	this.locker.Lock()
 	defer this.locker.Unlock()
 	dataset := this.dataset.Copy()
-	err := h.Reload(ts, dataset.setter)
-	if err != nil {
-		return err
+	if err := h.Reload(ts, dataset.setter); err != nil {
+		return NormalizeError(err)
 	}
 	if ts > 0 {
 		this.time = ts

@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/hwcer/cosgo/schema"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -21,7 +22,7 @@ type BulkWrite8 struct {
 	opts    []options.Lister[options.ClientBulkWriteOptions]
 	result  *mongo.ClientBulkWriteResult
 	schemas map[reflect.Type]*bulkWrite8Schema
-	Error   error
+	Error   *values.Message // 构建阶段的错误, 已由 NormalizeError 统一转换
 }
 
 type bulkWrite8Schema struct {
@@ -53,14 +54,14 @@ func (bw8 *BulkWrite8) Size() int {
 func (bw8 *BulkWrite8) update(model any, data any, where []any, includeZeroValue bool) {
 	table, sch, err := bw8.resolve(model)
 	if err != nil {
-		bw8.Error = err
+		bw8.Error = NormalizeError(err)
 		return
 	}
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
 	value, upsert, err := update.Build(data, sch, nil, includeZeroValue)
 	if err != nil {
-		bw8.Error = err
+		bw8.Error = NormalizeError(err)
 		return
 	}
 	if f, ok := model.(ModelBulkWriteFilter); ok {
@@ -91,7 +92,7 @@ func (bw8 *BulkWrite8) Save(model any, data any, where ...any) {
 func (bw8 *BulkWrite8) Insert(model any, documents ...any) {
 	table, _, err := bw8.resolve(model)
 	if err != nil {
-		bw8.Error = err
+		bw8.Error = NormalizeError(err)
 		return
 	}
 	for _, doc := range documents {
@@ -106,7 +107,7 @@ func (bw8 *BulkWrite8) Insert(model any, documents ...any) {
 func (bw8 *BulkWrite8) Delete(model any, where ...any) {
 	table, sch, err := bw8.resolve(model)
 	if err != nil {
-		bw8.Error = err
+		bw8.Error = NormalizeError(err)
 		return
 	}
 	query := clause.New()
@@ -136,13 +137,16 @@ func (bw8 *BulkWrite8) Submit() error {
 	if len(bw8.opts) == 0 {
 		bw8.opts = append(bw8.opts, options.ClientBulkWrite().SetOrdered(false))
 	}
-	return bw8.tx.pool.Execute(bw8.ctx, func(client *mongo.Client) error {
-		var err error
+	err := bw8.tx.pool.Execute(bw8.ctx, func(client *mongo.Client) (err error) {
 		if bw8.result, err = client.BulkWrite(bw8.ctx, bw8.writes, bw8.opts...); err == nil {
 			bw8.writes = nil
 		}
-		return err
+		return
 	})
+	if err != nil {
+		return NormalizeError(err)
+	}
+	return nil
 }
 
 // Result 获取上一次 Submit 的结果

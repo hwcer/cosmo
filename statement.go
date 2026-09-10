@@ -68,13 +68,13 @@ func (stmt *Statement) Parse() (tx *DB) {
 	// schema
 	if stmt.schema == nil {
 		if stmt.model != nil {
-			stmt.schema, tx.Error = schema.Parse(stmt.model)
+			var err error
+			if stmt.schema, err = schema.Parse(stmt.model); err != nil {
+				return tx.Errorf(err)
+			}
 		} else if stmt.table == "" {
 			// table 为空时尝试通过value解析
 			stmt.schema, _ = schema.Parse(stmt.value)
-		}
-		if tx.Error != nil {
-			return
 		}
 	}
 

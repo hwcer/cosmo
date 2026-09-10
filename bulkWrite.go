@@ -51,7 +51,7 @@ func (this *BulkWrite) Submit() (err error) {
 		}
 		return err
 	})
-	return this.tx.Error
+	return this.tx.Err()
 }
 func (this *BulkWrite) update(data any, where []any, includeZeroValue bool) {
 	stmt := this.tx.stmt

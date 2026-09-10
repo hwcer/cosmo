@@ -173,7 +173,7 @@ func cmdUpdate(tx *DB, client *mongo.Client) (err error) {
 	}
 
 	if err != nil {
-		tx.Error = err
+		tx.Error = NormalizeError(err)
 		return
 	}
 	return

@@ -54,7 +54,7 @@ func (db *DB) Range(f func(Cursor) bool) (tx *DB) {
 			}
 		}
 		if err := cursor.Err(); err != nil {
-			tx.Error = err
+			tx.Errorf(err)
 		}
 		return nil
 	})
