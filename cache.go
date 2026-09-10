@@ -1,10 +1,13 @@
 package cosmo
 
 import (
-	"github.com/hwcer/logger"
+	"maps"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/hwcer/logger"
 )
 
 // CacheEventType 缓存事件类型
@@ -39,8 +42,8 @@ type CacheHandle interface {
 // handle: 缓存句柄，用于加载和刷新缓存数据
 func NewCache(handle CacheHandle) *Cache {
 	i := &Cache{handle: handle}
-	i.time = time.Now().Unix()
-	i.dataset = NewCacheData()
+	i.time.Store(time.Now().Unix())
+	i.dataset.Store(NewCacheData())
 	return i
 }
 
@@ -56,9 +59,7 @@ type CacheData struct {
 
 func (this *CacheData) Copy() *CacheData {
 	d := NewCacheData()
-	for k, v := range this.dict {
-		d.dict[k] = v
-	}
+	maps.Copy(d.dict, this.dict)
 	return d
 }
 
@@ -76,22 +77,24 @@ func (this *CacheData) setter(id any, i CacheModel) {
 	this.dict[id] = i
 }
 
+// Cache 并发模型:dataset/cursor运行期可能被Listener触发的Delete/Reload替换,
+// 以原子快照整体发布,读路径(Len/Get/Has/Range/Cursor)无锁读快照
 type Cache struct {
-	time    int64
+	time    atomic.Int64
 	handle  CacheHandle
-	cursor  []CacheModel
+	cursor  atomic.Pointer[[]CacheModel]
 	locker  sync.Mutex
-	dataset *CacheData
+	dataset atomic.Pointer[CacheData]
 }
 
 func (this *Cache) Len() int {
-	return len(this.dataset.dict)
+	return len(this.dataset.Load().dict)
 }
 func (this *Cache) Get(id string) any {
-	return this.dataset.dict[id]
+	return this.dataset.Load().dict[id]
 }
 func (this *Cache) Has(id string) (ok bool) {
-	_, ok = this.dataset.dict[id]
+	_, ok = this.dataset.Load().dict[id]
 	return
 }
 
@@ -102,18 +105,23 @@ func (this *Cache) Lock(f func() error) error {
 }
 func (this *Cache) Cursor(update int64, filter CacheFilter) []any {
 	var cursor []CacheModel
-	if len(this.cursor) == 0 {
-		this.locker.Lock()
-		defer this.locker.Unlock()
-		for _, v := range this.dataset.dict {
-			cursor = append(cursor, v)
-		}
-		sort.Slice(cursor, func(i, j int) bool {
-			return cursor[i].GetUpdate() > cursor[j].GetUpdate()
-		})
-		this.cursor = cursor
+	if cur := this.cursor.Load(); cur != nil && len(*cur) > 0 {
+		cursor = *cur
 	} else {
-		cursor = this.cursor
+		this.locker.Lock()
+		if cur := this.cursor.Load(); cur != nil && len(*cur) > 0 {
+			//双重检查:等锁期间已被其他调用填充
+			cursor = *cur
+		} else {
+			for _, v := range this.dataset.Load().dict {
+				cursor = append(cursor, v)
+			}
+			sort.Slice(cursor, func(i, j int) bool {
+				return cursor[i].GetUpdate() > cursor[j].GetUpdate()
+			})
+			this.cursor.Store(&cursor)
+		}
+		this.locker.Unlock()
 	}
 	var r []any
 	for _, v := range cursor {
@@ -142,16 +150,13 @@ func (this *Cache) Page(page *Paging, filter CacheFilter) (err error) {
 		return
 	}
 	offset := (page.Page - 1) * page.Size
-	end := offset + page.Size
-	if end > page.Record {
-		end = page.Record
-	}
+	end := min(offset+page.Size, page.Record)
 	page.Rows = cursor[offset:end]
 	return
 }
 
 func (this *Cache) Range(f func(any) bool) {
-	for _, v := range this.dataset.dict {
+	for _, v := range this.dataset.Load().dict {
 		if !f(v) {
 			return
 		}
@@ -160,12 +165,12 @@ func (this *Cache) Range(f func(any) bool) {
 func (this *Cache) Delete(id string) {
 	this.locker.Lock()
 	defer this.locker.Unlock()
-	this.cursor = nil
-	this.dataset = this.dataset.Delete(id)
+	this.cursor.Store(nil)
+	this.dataset.Store(this.dataset.Load().Delete(id))
 }
 
 func (this *Cache) Reload(ts int64, handle ...CacheHandle) error {
-	if ts > 0 && ts <= this.time {
+	if ts > 0 && ts <= this.time.Load() {
 		return nil
 	}
 	var h CacheHandle
@@ -177,15 +182,19 @@ func (this *Cache) Reload(ts int64, handle ...CacheHandle) error {
 
 	this.locker.Lock()
 	defer this.locker.Unlock()
-	dataset := this.dataset.Copy()
+	//双重检查:并发Reload时后进入的发现自己已过期直接返回
+	if ts > 0 && ts <= this.time.Load() {
+		return nil
+	}
+	dataset := this.dataset.Load().Copy()
 	if err := h.Reload(ts, dataset.setter); err != nil {
 		return NormalizeError(err)
 	}
 	if ts > 0 {
-		this.time = ts
+		this.time.Store(ts)
 	}
-	this.cursor = nil
-	this.dataset = dataset
+	this.cursor.Store(nil)
+	this.dataset.Store(dataset)
 	return nil
 }
 

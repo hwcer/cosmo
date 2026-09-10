@@ -23,10 +23,29 @@ func (q *Query) Build(model *schema.Schema) Filter {
 		q.build(model, filter, node)
 	}
 	for _, t := range complexCondition {
-		for _, node := range q.complex[t] {
-			v := make(Filter)
-			q.build(model, v, node)
-			filter.Match(t, v)
+		groups := q.complex[t]
+		if len(groups) == 0 {
+			continue
+		}
+		if len(groups) == 1 {
+			//单组:每项独立进入$t数组(如$or:[{a:1},{b:2}]),与既有行为一致
+			for _, node := range groups[0] {
+				v := make(Filter)
+				q.build(model, v, node)
+				filter.Match(t, v)
+			}
+			continue
+		}
+		//多组:各组独立成完整的$t表达式再用$and组合,
+		//否则"a=1 OR b=2"与"c=3 OR d=4"会被拍平成四选一,语义错误
+		for _, group := range groups {
+			gf := make(Filter)
+			for _, node := range group {
+				v := make(Filter)
+				q.build(model, v, node)
+				gf.Match(t, v)
+			}
+			filter.Match(QueryOperationAND, gf)
 		}
 	}
 	q.filter = filter

@@ -25,11 +25,11 @@ type SetOnInsert interface {
 // 用于从语句中获取构建Update所需的信息
 
 type iStmt interface {
-	GetValue() any               // 获取值
-	GetSchema() *schema.Schema   // 获取模型schema
-	GetSelector() *Selector      // 获取字段选择器
+	GetValue() any                  // 获取值
+	GetSchema() *schema.Schema      // 获取模型schema
+	GetSelector() *Selector         // 获取字段选择器
 	GetReflectValue() reflect.Value // 获取反射值
-	GetIncludeZeroValue() bool   // 获取是否包含零值
+	GetIncludeZeroValue() bool      // 获取是否包含零值
 }
 
 // Build 将各种类型（map、bson.M、Struct）转换为Update
@@ -39,6 +39,10 @@ type iStmt interface {
 // 参数 includeZeroValue: 是否包含零值字段
 // 返回值: Update实例、是否需要upsert、可能的错误
 func Build(i any, sch *schema.Schema, filter *Selector, includeZeroValue bool) (update Update, upsert bool, err error) {
+	if filter == nil {
+		//nil Selector在parseStruct中会被解引用panic,统一兜底为"全选"
+		filter = &Selector{}
+	}
 	reflectValue := reflect.Indirect(utils.ValueOf(i))
 	switch reflectValue.Kind() {
 	case reflect.Map:
@@ -113,16 +117,32 @@ func parseStruct(desc any, reflectValue reflect.Value, sch *schema.Schema, filte
 			err = fmt.Errorf("parseStruct panic: %v", e)
 		}
 	}()
-	
+
 	// 如果没有提供schema，自动解析
 	if sch == nil {
 		if sch, err = schema.Parse(desc); err != nil {
 			return
 		}
 	}
-	
+
 	update = make(Update)
-	
+
+	//Selector中存的是用户原始输入(Go字段名/json名/落库名皆可能),
+	//而下方匹配用的是field.DBName();名字对不上时Select/Omit会静默失效
+	//(同参数Find正常、Updates全丢)。这里按schema把filter的key统一换算成落库名再匹配,
+	//换算失败的原样保留(与Projection()口径一致)。构建副本,不改动共享的原始Selector。
+	if filter != nil && filter.projection != nil {
+		normalized := &Selector{selector: filter.selector, projection: make(map[string]bool, len(filter.projection))}
+		for k, v := range filter.projection {
+			db := k
+			if name, err := sch.DBName(k); err == nil {
+				db = name
+			}
+			normalized.projection[db] = v
+		}
+		filter = normalized
+	}
+
 	// 遍历模型字段
 	sch.Range(func(field *schema.Field) bool {
 		k := field.DBName()
@@ -130,7 +150,7 @@ func parseStruct(desc any, reflectValue reflect.Value, sch *schema.Schema, filte
 		if k == clause.MongoPrimaryName {
 			return true
 		}
-		
+
 		v := reflectValue.FieldByIndex(field.Index)
 		// 如果字段在选择器中且有效
 		if filter.Has(k) && v.IsValid() {
@@ -141,7 +161,7 @@ func parseStruct(desc any, reflectValue reflect.Value, sch *schema.Schema, filte
 		}
 		return true
 	})
-	
+
 	// 如果结构体实现了SetOnInsert接口，处理插入时的字段设置
 	if s, ok := desc.(SetOnInsert); ok {
 		var v map[string]any
@@ -149,7 +169,7 @@ func parseStruct(desc any, reflectValue reflect.Value, sch *schema.Schema, filte
 			update[UpdateTypeSetOnInsert] = v
 		}
 	}
-	
+
 	return
 }
 

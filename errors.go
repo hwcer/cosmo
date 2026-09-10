@@ -3,6 +3,7 @@ package cosmo
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -304,23 +305,19 @@ type serverError struct {
 //
 //	mongo.ClientBulkWriteException(client.BulkWrite) 没有实现 mongo.ServerError, 驱动自带的 mongo.IsDuplicateKeyError 识别不了, 这里需要单独处理
 func serverErrors(err error) (errs []serverError) {
-	var ce mongo.CommandError
-	if errors.As(err, &ce) {
+	if ce, ok := errors.AsType[mongo.CommandError](err); ok {
 		errs = append(errs, serverError{code: ce.Code, message: ce.Message})
 	}
 
-	var we mongo.WriteError
-	if errors.As(err, &we) {
+	if we, ok := errors.AsType[mongo.WriteError](err); ok {
 		errs = append(errs, serverError{code: int32(we.Code), message: we.Message})
 	}
 
-	var wce mongo.WriteConcernError
-	if errors.As(err, &wce) {
+	if wce, ok := errors.AsType[mongo.WriteConcernError](err); ok {
 		errs = append(errs, serverError{code: int32(wce.Code), message: wce.Message})
 	}
 
-	var wex mongo.WriteException
-	if errors.As(err, &wex) {
+	if wex, ok := errors.AsType[mongo.WriteException](err); ok {
 		for _, e := range wex.WriteErrors {
 			errs = append(errs, serverError{code: int32(e.Code), message: e.Message})
 		}
@@ -329,8 +326,7 @@ func serverErrors(err error) (errs []serverError) {
 		}
 	}
 
-	var bwe mongo.BulkWriteException
-	if errors.As(err, &bwe) {
+	if bwe, ok := errors.AsType[mongo.BulkWriteException](err); ok {
 		for _, e := range bwe.WriteErrors {
 			errs = append(errs, serverError{code: int32(e.Code), message: e.Message})
 		}
@@ -339,8 +335,7 @@ func serverErrors(err error) (errs []serverError) {
 		}
 	}
 
-	var cbwe mongo.ClientBulkWriteException
-	if errors.As(err, &cbwe) {
+	if cbwe, ok := errors.AsType[mongo.ClientBulkWriteException](err); ok {
 		if cbwe.WriteError != nil {
 			errs = append(errs, serverError{code: int32(cbwe.WriteError.Code), message: cbwe.WriteError.Message})
 		}
@@ -495,10 +490,5 @@ func appendUnique(dst []string, items ...string) []string {
 }
 
 func containsString(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, s)
 }

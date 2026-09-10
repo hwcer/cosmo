@@ -9,16 +9,16 @@ import (
 type SelectorType int8
 
 const (
-	SelectorTypeNone SelectorType = iota   // 无选择（默认）
-	SelectorTypeOmit SelectorType = iota   // 排除模式：排除指定字段
+	SelectorTypeNone   SelectorType = iota // 无选择（默认）
+	SelectorTypeOmit   SelectorType = iota // 排除模式：排除指定字段
 	SelectorTypeSelect SelectorType = iota // 选择模式：仅选择指定字段
 )
 
 // Selector 字段选择器结构体
 // 用于在创建、更新和查询操作中指定要包含或排除的字段
 type Selector struct {
-	selector   SelectorType      // 选择器类型
-	projection map[string]bool   // 字段投影映射，键为字段名，值为是否选择
+	selector   SelectorType    // 选择器类型
+	projection map[string]bool // 字段投影映射，键为字段名，值为是否选择
 }
 
 // Has 检查指定字段是否被选择

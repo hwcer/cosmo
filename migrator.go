@@ -52,7 +52,9 @@ func (db *DB) indexes(model any, index *schema.Index) (err error) {
 }
 
 func (db *DB) indexPartialBuild(sch *schema.Schema, where []string) (any, error) {
-	q := clause.Query{}
+	//必须用clause.New():字面量构造的Query其complex为nil,
+	//含OR的where条件会向nil map写入而panic
+	q := clause.New()
 	for _, v := range where {
 		q.Where(v)
 	}

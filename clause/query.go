@@ -35,7 +35,7 @@ var complexCondition = []string{QueryOperationOR, QueryOperationAND, QueryOperat
 // query.Eq("name", "John").Gt("age", 18)
 func New() *Query {
 	q := &Query{}
-	q.complex = make(map[string][]*Node)
+	q.complex = make(map[string][][]*Node)
 	return q
 }
 
@@ -52,11 +52,12 @@ type Node struct {
 // Query 表示 MongoDB 查询条件构建器，用于构建复杂的查询条件。
 // filter 是查询过滤器
 // where 是简单条件节点列表
-// complex 是复杂条件（or, and, not, nor）的节点映射
+// complex 是复杂条件（or, and, not, nor）的节点分组:每次match调用形成一个独立分组,
+// 分组之间是AND关系,避免多次Where("...OR...")的OR项被拍平进同一个$or改变语义
 type Query struct {
-	filter  Filter             // 查询过滤器
-	where   []*Node            // 简单条件节点列表
-	complex map[string][]*Node // 复杂条件节点映射
+	filter  Filter               // 查询过滤器
+	where   []*Node              // 简单条件节点列表
+	complex map[string][][]*Node // 复杂条件节点分组
 }
 
 // Len 返回查询条件中节点的总数，包括简单条件和复杂条件。
@@ -68,8 +69,10 @@ type Query struct {
 // fmt.Println(query.Len()) // 输出: 2
 func (q *Query) Len() (r int) {
 	r += len(q.where)
-	for _, n := range q.complex {
-		r += len(n)
+	for _, groups := range q.complex {
+		for _, n := range groups {
+			r += len(n)
+		}
 	}
 	return
 }
@@ -104,7 +107,7 @@ func (q *Query) any(t, k string, v any) {
 // 如果条件类型以 $ 开头，会自动移除 $ 前缀。
 func (q *Query) match(t string, v ...*Node) {
 	t = strings.TrimPrefix(t, QueryOperationPrefix)
-	q.complex[t] = append(q.complex[t], v...)
+	q.complex[t] = append(q.complex[t], v)
 }
 
 // Eq 添加等于（$eq）条件匹配。

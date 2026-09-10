@@ -5,12 +5,38 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
+
+// convertExclusionProjection 将排除式投影(Omit产物)转换为选择式投影
+// findAndModify禁止除_id外的排除投影,需要取补集;仅在能枚举schema全字段时转换,
+// 否则返回nil保持原样(与旧行为一致)
+func convertExclusionProjection(sch *schema.Schema, projection map[string]bool) map[string]bool {
+	excluded := false
+	for _, v := range projection {
+		if !v {
+			excluded = true
+			break
+		}
+	}
+	if !excluded || sch == nil {
+		return nil
+	}
+	r := map[string]bool{}
+	sch.Range(func(field *schema.Field) bool {
+		k := field.DBName()
+		if v, ok := projection[k]; !ok || v {
+			r[k] = true
+		}
+		return true
+	})
+	return r
+}
 
 // Create insert the value into dbname
 func cmdCreate(tx *DB, client *mongo.Client) (err error) {
@@ -32,7 +58,7 @@ func cmdCreate(tx *DB, client *mongo.Client) (err error) {
 			tx.RowsAffected = int64(len(result.InsertedIDs))
 		}
 	default:
-		panic("unhandled default case")
+		return fmt.Errorf("unsupported create value type:%T", tx.stmt.value)
 	}
 
 	return
@@ -186,7 +212,8 @@ func UpdateOne(tx *DB, coll *mongo.Collection, filter clause.Filter, data update
 	}
 	var result *mongo.UpdateResult
 	if result, err = coll.UpdateOne(tx.stmt.Context, filter, data, opts); err == nil {
-		tx.RowsAffected = result.ModifiedCount
+		//upsert插入的新文档ModifiedCount=0,计入UpsertedCount,否则调用方无法区分"没匹配"与"新插入"
+		tx.RowsAffected = result.ModifiedCount + result.UpsertedCount
 	}
 
 	return
@@ -199,6 +226,10 @@ func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data
 	}
 
 	if projection := tx.stmt.selector.Projection(tx.stmt.schema); len(projection) > 0 {
+		//findAndModify禁止除_id外的排除投影,Omit模式下须转换为选择式(补集)
+		if p := convertExclusionProjection(tx.stmt.schema, projection); p != nil {
+			projection = p
+		}
 		opts.SetProjection(projection)
 	}
 	opts.SetReturnDocument(options.After)

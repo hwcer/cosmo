@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/hwcer/cosgo/schema"
+	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -86,7 +88,7 @@ func (db *DB) First(val any, where ...any) (tx *DB) {
 	}
 	tx.Limit(1)
 	if len(tx.stmt.orders) == 0 {
-		tx = tx.Order("_id", -1)
+		tx = tx.Order("_id", 1) //1为升序,取最小_id
 	}
 	tx.stmt.value = val
 	return tx.callbacks.Query().Execute(tx)
@@ -100,7 +102,7 @@ func (db *DB) Last(val any, where ...any) (tx *DB) {
 	}
 	tx.Limit(1)
 	if len(tx.stmt.orders) == 0 {
-		tx = tx.Order("_id", 1)
+		tx = tx.Order("_id", -1) //-1为降序,取最大_id
 	}
 	tx.stmt.value = val
 	return tx.callbacks.Query().Execute(tx)
@@ -170,25 +172,43 @@ func (db *DB) Updates(values any, conds ...any) (tx *DB) {
 // db.model(&User).delete(1) 匹配 _id=1
 // db.model(&User).delete([]int{1,2,3}) 匹配 _id IN (1,2,3)
 // db.model(&User).delete("name = ?","myname") 匹配 name=myname
-// db.delete(&User{Id:1}) 根据结构体中的_id字段删除记录
+// db.delete(&User{Id:1}) 根据结构体中的_id字段删除记录,仅仅在不包含任何条件时才解析
 func (db *DB) Delete(conds ...any) (tx *DB) {
 	tx = db.getInstance()
 	if len(conds) > 0 {
 		// 检查第一个参数是否为结构体或指针，设置为model以解析表名
 		val := conds[0]
 		valType := reflect.TypeOf(val)
-		if valType != nil {
-			if valType.Kind() == reflect.Pointer {
-				valType = valType.Elem()
-			}
-			if valType.Kind() == reflect.Struct {
+		if valType == nil {
+			tx.Errorf("cannot delete nil value")
+			return
+		}
+		if valType.Kind() == reflect.Pointer {
+			valType = valType.Elem()
+		}
+		if valType.Kind() == reflect.Struct {
+			if tx.stmt.model == nil {
 				tx.stmt.model = val
-			} else {
-				tx = tx.Where(conds[0], conds[1:]...)
+			}
+			if len(conds) > 1 {
+				tx = tx.Where(conds[1], conds[2:]...)
+			}
+			// db.delete(&User{Id:1}) 按结构体主键删除(文档声明的行为):
+			// 主键非零条件为空时生成_id查询条件,否则cmdDelete会因filter为空而报错
+			if tx.stmt.Clause.Len() == 0 {
+				if sch, perr := schema.Parse(val); perr == nil {
+					if field := sch.LookUpField(clause.MongoPrimaryName); field != nil {
+						rv := reflect.Indirect(reflect.ValueOf(val))
+						if v := rv.FieldByIndex(field.StructField.Index); v.IsValid() && !v.IsZero() {
+							tx = tx.Where(clause.MongoPrimaryName, v.Interface())
+						}
+					}
+				}
 			}
 		} else {
 			tx = tx.Where(conds[0], conds[1:]...)
 		}
+
 	}
 	return tx.callbacks.Delete().Execute(tx)
 }

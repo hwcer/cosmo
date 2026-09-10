@@ -55,6 +55,10 @@ func (this *BulkWrite) Submit() (err error) {
 }
 func (this *BulkWrite) update(data any, where []any, includeZeroValue bool) {
 	stmt := this.tx.stmt
+	if len(where) == 0 {
+		_ = this.tx.Errorf(ErrMissingWhereClause)
+		return
+	}
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
 	value, upsert, err := update.Build(data, stmt.GetSchema(), stmt.GetSelector(), includeZeroValue)
@@ -93,6 +97,10 @@ func (this *BulkWrite) Insert(documents ...any) {
 }
 
 func (this *BulkWrite) Delete(where ...any) {
+	if len(where) == 0 {
+		_ = this.tx.Errorf(ErrMissingWhereClause)
+		return
+	}
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
 	filter := query.Build(this.tx.stmt.schema)

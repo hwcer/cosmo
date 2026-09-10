@@ -119,6 +119,11 @@ func NewClient(address string, opts ...*options.ClientOptions) (client *mongo.Cl
 		return
 	}
 	if err = client.Ping(context.Background(), nil); err != nil {
+		//Ping失败也必须Disconnect:mongo.Connect已启动拓扑监控goroutine,
+		//不关闭会随每次重试累积泄漏
+		disCtx, disCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_ = client.Disconnect(disCtx)
+		disCancel()
 		return
 	}
 	return

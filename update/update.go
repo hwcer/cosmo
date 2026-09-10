@@ -216,8 +216,9 @@ func (u Update) Projection() bson.M {
 // 解析不出来就报错。宁可让这次写入失败，也不要把数据写到错误的字段上。
 func (u Update) Transform(sch *schema.Schema) (Update, error) {
 	r := Update{}
-	for _, t := range []string{UpdateTypeSet, UpdateTypeInc, UpdateTypeUnset, UpdateTypeSetOnInsert} {
-		if m, ok := u[t]; ok {
+	for t, m := range u {
+		switch t {
+		case UpdateTypeSet, UpdateTypeInc, UpdateTypeUnset, UpdateTypeSetOnInsert:
 			d := bson.M{}
 			for k, v := range m {
 				db, err := sch.DBName(k)
@@ -227,6 +228,11 @@ func (u Update) Transform(sch *schema.Schema) (Update, error) {
 				d[db] = v
 			}
 			r[t] = d
+		default:
+			//其余操作符($push/$pull/$min/$max/$pop等)原样保留:
+			//其值结构各异(如$each修饰符),不做字段名转换,更不能静默丢弃——
+			//丢弃会造成"写入成功但数据没变"的数据丢失
+			r[t] = m
 		}
 	}
 	return r, nil

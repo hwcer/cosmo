@@ -52,6 +52,10 @@ func (bw8 *BulkWrite8) Size() int {
 }
 
 func (bw8 *BulkWrite8) update(model any, data any, where []any, includeZeroValue bool) {
+	if len(where) == 0 {
+		bw8.Error = NormalizeError(ErrMissingWhereClause)
+		return
+	}
 	table, sch, err := bw8.resolve(model)
 	if err != nil {
 		bw8.Error = NormalizeError(err)
@@ -86,8 +90,6 @@ func (bw8 *BulkWrite8) Save(model any, data any, where ...any) {
 	bw8.update(model, data, where, true)
 }
 
-
-
 // Insert 添加插入操作
 func (bw8 *BulkWrite8) Insert(model any, documents ...any) {
 	table, _, err := bw8.resolve(model)
@@ -105,6 +107,10 @@ func (bw8 *BulkWrite8) Insert(model any, documents ...any) {
 
 // Delete 添加删除操作
 func (bw8 *BulkWrite8) Delete(model any, where ...any) {
+	if len(where) == 0 {
+		bw8.Error = NormalizeError(ErrMissingWhereClause)
+		return
+	}
 	table, sch, err := bw8.resolve(model)
 	if err != nil {
 		bw8.Error = NormalizeError(err)

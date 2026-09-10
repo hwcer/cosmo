@@ -17,13 +17,13 @@ import (
 // 负责连接池的健康检查、自动恢复和监控指标收集
 // 提供高可用的数据库连接服务，支持自动重连和故障转移
 type Manager struct {
-	client       *mongo.Client // MongoDB客户端实例
-	originalURI  string        // 保存原始连接地址
-	isStarted    atomic.Bool   // 防止重复启动健康检查
-	isChecking   atomic.Bool   // 健康检查进行中标记
-	isRecovering atomic.Bool   // 连接恢复进行中标记
-	failureCount atomic.Int32  // 连续失败计数，用于指数退避
-	metrics      *Metrics      // 监控指标
+	client       atomic.Pointer[mongo.Client] // MongoDB客户端实例(运行期可能被tryRecover替换,原子读写)
+	originalURI  string                       // 保存原始连接地址
+	isStarted    atomic.Bool                  // 防止重复启动健康检查
+	isChecking   atomic.Bool                  // 健康检查进行中标记
+	isRecovering atomic.Bool                  // 连接恢复进行中标记
+	failureCount atomic.Int32                 // 连续失败计数，用于指数退避
+	metrics      *Metrics                     // 监控指标
 }
 
 // Config 连接池全局配置
@@ -120,11 +120,12 @@ func New(uri string) *Manager {
 		panic(fmt.Sprintf("创建MongoDB客户端失败: %v", err))
 	}
 
-	return &Manager{
-		client:      client,
+	m := &Manager{
 		originalURI: uri, // 保存原始连接地址
 		metrics:     &Metrics{},
 	}
+	m.client.Store(client)
+	return m
 }
 
 // Start 启动连接池健康检查
@@ -210,7 +211,7 @@ func (m *Manager) performHealthCheck(ctx context.Context) *Status {
 	start := time.Now()
 
 	// 1. 基础 Ping 测试
-	err := m.client.Ping(ctx, nil)
+	err := m.client.Load().Ping(ctx, nil)
 	latency := time.Since(start)
 
 	if err != nil {
@@ -219,7 +220,7 @@ func (m *Manager) performHealthCheck(ctx context.Context) *Status {
 
 	// 2. 执行简单查询测试
 	testStart := time.Now()
-	db := m.client.Database("admin")
+	db := m.client.Load().Database("admin")
 	var result bson.M
 	err = db.RunCommand(ctx, bson.D{{Key: "ping", Value: 1}}).Decode(&result)
 	testLatency := time.Since(testStart)
@@ -250,7 +251,7 @@ func (m *Manager) IsHealthy() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), Config.QuickCheckTimeout)
 	defer cancel()
 
-	err := m.client.Ping(ctx, nil)
+	err := m.client.Load().Ping(ctx, nil)
 	return err == nil
 }
 
@@ -275,7 +276,7 @@ func (m *Manager) tryRecover() {
 	defer cancel()
 
 	// 1. 保存旧连接引用
-	oldClient := m.client
+	oldClient := m.client.Load()
 
 	// 2. 条件性等待稳定延迟
 	// 如果是第一次失败，立即尝试恢复；连续失败时才应用稳定延迟
@@ -302,10 +303,9 @@ func (m *Manager) tryRecover() {
 		if attempt > 0 {
 			logger.Debug("连接恢复重试 (%d/%d)...", attempt, maxRetries)
 			// 等待重试延迟，使用指数退避
-			backoffDelay := time.Duration(math.Pow(float64(Config.BackoffBase), float64(attempt-Config.AttemptOffset))) * retryDelay
-			if backoffDelay > Config.MaxBackoffDelay {
-				backoffDelay = Config.MaxBackoffDelay // 最大退避延迟
-			}
+			backoffDelay := min(time.Duration(math.Pow(float64(Config.BackoffBase), float64(attempt-Config.AttemptOffset)))*retryDelay,
+				// 最大退避延迟
+				Config.MaxBackoffDelay)
 			logger.Debug("重试延迟: %v", backoffDelay)
 			time.Sleep(backoffDelay)
 		}
@@ -314,6 +314,13 @@ func (m *Manager) tryRecover() {
 		newClient, err = NewClient(m.originalURI)
 		if err != nil {
 			logger.Error("创建新客户端失败 (尝试 %d/%d): %v", attempt+1, maxRetries+1, err)
+			//NewClient失败时可能已返回非nil client(如Ping失败),必须断开,
+			//否则泄漏驱动后台goroutine,数据库宕机期间持续累积
+			if newClient != nil {
+				closeCtx, closeCancel := context.WithTimeout(context.Background(), Config.CloseTimeout)
+				_ = newClient.Disconnect(closeCtx)
+				closeCancel()
+			}
 			continue
 		}
 
@@ -369,9 +376,8 @@ func (m *Manager) tryRecover() {
 		return
 	}
 
-	// 5. 替换旧客户端
-	oldClient = m.client
-	m.client = newClient
+	// 5. 替换旧客户端(Swap原子替换并取回旧值)
+	oldClient = m.client.Swap(newClient)
 	logger.Debug("客户端替换成功")
 
 	// 6. 安全关闭旧客户端
@@ -385,7 +391,7 @@ func (m *Manager) tryRecover() {
 		defer closeCancel()
 
 		// 关闭前再次验证旧客户端是否仍被使用（防止并发问题）
-		if oldClient == m.client {
+		if oldClient == m.client.Load() {
 			logger.Debug("旧客户端仍在使用中，跳过关闭")
 			return
 		}
@@ -492,7 +498,7 @@ func (m *Manager) warmupConnections(ctx context.Context) error {
 
 	// 执行几个简单的查询来预热连接
 	for i := 0; i < Config.WarmupQueryCount; i++ { // 使用全局配置的预热查询次数
-		db := m.client.Database("admin")
+		db := m.client.Load().Database("admin")
 		var result bson.M
 		err := db.RunCommand(ctx, bson.D{{Key: "ping", Value: 1}}).Decode(&result)
 
@@ -519,7 +525,7 @@ func (m *Manager) Execute(ctx context.Context, operation func(*mongo.Client) err
 	}
 
 	// 执行数据库操作
-	err := operation(m.client)
+	err := operation(m.client.Load())
 	if err == nil {
 		return nil // 操作成功，直接返回
 	}
@@ -550,7 +556,7 @@ func (m *Manager) Execute(ctx context.Context, operation func(*mongo.Client) err
 
 	// 连接恢复成功，再次尝试执行操作
 	logger.Debug("连接恢复成功，重试操作...")
-	return operation(m.client)
+	return operation(m.client.Load())
 }
 
 // GetMetrics 获取连接池监控指标
