@@ -3,8 +3,8 @@ module github.com/hwcer/cosmo
 go 1.26.0
 
 require (
-	github.com/hwcer/cosgo v1.8.4-0.20260904100637-05162b06213a
-	github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245
+	github.com/hwcer/cosgo v1.8.4-0.20260912010310-8e8fd00d86e3
+	github.com/hwcer/logger v0.2.9-0.20260910161556-c8faab738be9
 	go.mongodb.org/mongo-driver/v2 v2.7.0
 )
 
