@@ -107,7 +107,7 @@ func NormalizeError(err error) *values.Message {
 		for _, f := range fields {
 			args = append(args, f)
 		}
-		return values.Errorf(code, ErrDuplicateKey).WithArgs(args...)
+		return values.Errorf(code, ErrDuplicateKey).Clone(args...)
 	}
 
 	if isDataTypeError(err) {
