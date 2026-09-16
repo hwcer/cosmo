@@ -219,23 +219,21 @@ func (db *DB) WithContext(ctx context.Context) *DB {
 // db.Errorf("操作失败: %v", err)
 // Errorf 设置错误状态并返回 db，**Error 字段写入的唯一入口**。
 //
-// 🔴 nil 入参为赋值语义的"清空"：values.Errorf 会把 nil 格式化成 "<nil>" 文案
-// 产出非 nil Message，而空的 *values.Message 一旦装进 error 接口就是 typed-nil
-// （err != nil 判真、%v 打 <nil>、Error() 方法 panic）。这里拦下来保持
-// `db.Error = nil` 的行为——与 updater.Errorf 的 nil 拦截同一范式。
-// error 入参走 NormalizeError（nil→nil）双保险；调用方传错误时保持既有习惯即可。
+// 🔴 只有 format 非 nil 才处理：nil 入参直接跳过、**绝不动已存在的 Error**——
+// 不能吞错误（updater.Errorf 同款纪律）。values.Errorf 会把 nil 格式化成
+// "<nil>" 文案产出非 nil Message，而空的 *values.Message 装进 error 接口就是
+// typed-nil（err != nil 判真、%v 打 <nil>、Error() 方法 panic），所以 nil 必须
+// 原样跳过而不是写进去。
 func (db *DB) Errorf(format any, args ...any) *DB {
-	if format == nil {
-		db.Error = nil
-		return db
-	}
-	switch v := format.(type) {
-	case error:
-		db.Error = NormalizeError(v)
-	case string:
-		db.Error = values.Error(fmt.Errorf(v, args...))
-	default:
-		db.Error = values.Error(fmt.Errorf("%v", format))
+	if format != nil {
+		switch v := format.(type) {
+		case error:
+			db.Error = NormalizeError(v)
+		case string:
+			db.Error = values.Error(fmt.Errorf(v, args...))
+		default:
+			db.Error = values.Error(fmt.Errorf("%v", format))
+		}
 	}
 	return db
 }
