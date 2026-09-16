@@ -217,7 +217,18 @@ func (db *DB) WithContext(ctx context.Context) *DB {
 //
 // 使用示例：
 // db.Errorf("操作失败: %v", err)
+// Errorf 设置错误状态并返回 db，**Error 字段写入的唯一入口**。
+//
+// 🔴 nil 入参为赋值语义的"清空"：values.Errorf 会把 nil 格式化成 "<nil>" 文案
+// 产出非 nil Message，而空的 *values.Message 一旦装进 error 接口就是 typed-nil
+// （err != nil 判真、%v 打 <nil>、Error() 方法 panic）。这里拦下来保持
+// `db.Error = nil` 的行为——与 updater.Errorf 的 nil 拦截同一范式。
+// error 入参走 NormalizeError（nil→nil）双保险；调用方传错误时保持既有习惯即可。
 func (db *DB) Errorf(format any, args ...any) *DB {
+	if format == nil {
+		db.Error = nil
+		return db
+	}
 	switch v := format.(type) {
 	case error:
 		db.Error = NormalizeError(v)
