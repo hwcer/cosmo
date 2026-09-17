@@ -233,7 +233,6 @@ func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data
 		opts.SetProjection(projection)
 	}
 	opts.SetReturnDocument(options.After)
-	values := make(map[string]any)
 	updateResult := coll.FindOneAndUpdate(tx.stmt.Context, filter, data, opts)
 	if err = updateResult.Err(); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -241,17 +240,20 @@ func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data
 		}
 		return err
 	}
-
-	if err = updateResult.Decode(&values); err != nil {
-		return err
-	}
 	tx.RowsAffected = 1
-	if len(values) > 0 {
-		if e := tx.SetColumn(values); e != nil {
-			return e
-		}
-	}
-	return
+
+	//+++ UpdateAndModify 回写改为「整行直接解码进内存模型」。
+	// 原路径 Decode(&values) + SetColumn 逐字段反射：值经 map[string]any 中转后，
+	// 内嵌子文档（如 Guild.hunt，无 bson tag 的 proto 消息字段）到达字段 setter 时
+	// 是扩展 JSON 字符串，schema 无法赋给结构体字段，报
+	// `failed to set value {…} to field Hunt`，令含内嵌子文档的文档无法使用 UpdateAndModify
+	// （ProjectElf 公会捐献真机复现，2026-09-17）。
+	// bson 解码器对「子文档 → 结构体字段」天然支持（与模型加载路径同一套解码），
+	// 整行直接解码进 model 后内存与库严格一致，且天然兼容内嵌子文档。
+	//
+	// ⚠ 本函数仅在 cmdUpdate 的 updateAndModifyModel 分支被调用，所以走到的必然是
+	// UpdateAndModify 场景——直接解码进 model 并 return，不再走 values + SetColumn。
+	return updateResult.Decode(tx.stmt.model)
 }
 
 // cmdDelete delete value match given conditions, if it value has primary key, then will including primary key as condition
