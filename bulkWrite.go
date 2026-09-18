@@ -2,9 +2,11 @@ package cosmo
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
+	"github.com/hwcer/logger"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -32,7 +34,14 @@ func (this *BulkWrite) Size() int {
 	return len(this.models)
 }
 
-// Submit 提交修改。提交后 models 被清空，重复调用返回 nil（无操作）
+// Submit 提交修改。成功后 models 被清空，重复调用返回 nil（无操作）。
+//
+// 🔴 部分成功只保留失败条目:unordered 批量(默认)返回逐条错误(BulkWriteException)时,
+// 按 Index 剔除已生效的 model,只保留失败的那几条等下次 Submit 重试;
+// ordered 批量(failure 之后的条目未执行,Index 不可信)与整批级错误(网络断连、
+// 写关注失败等无法定位具体条目)全量保留。
+// 逐条失败都是确定性错误(重复主键、文档校验等),重发也不会成功 —— 不剔除的话,
+// 重试时已生效条目会再次执行(插入类撞重复主键),失败条目则永远卡死队列,连带后续提交全部失败。
 func (this *BulkWrite) Submit() (err error) {
 	if this.tx.Error != nil {
 		return this.tx.Error
@@ -43,15 +52,59 @@ func (this *BulkWrite) Submit() (err error) {
 	if len(this.opts) == 0 {
 		this.opts = append(this.opts, options.BulkWrite().SetOrdered(false))
 	}
+	unordered := !this.resolveOrdered()
 
 	this.tx = this.tx.callbacks.Call(this.tx, func(db *DB, client *mongo.Client) error {
 		coll := client.Database(db.dbname).Collection(db.stmt.table)
-		if this.result, err = coll.BulkWrite(db.stmt.Context, this.models, this.opts...); err == nil {
+		this.result, err = coll.BulkWrite(db.stmt.Context, this.models, this.opts...)
+		if err == nil {
 			this.models = nil
+		} else if unordered {
+			this.retainFailures(err)
 		}
 		return err
 	})
 	return this.tx.Err()
+}
+
+// retainFailures 部分成功清理:按 WriteErrors.Index 剔除已生效的 model,只保留失败的。
+// 重复主键(E11000)常见于「上次整批错误(如断连)后重发」的插入 —— 上次实际已写入,这里一并剔除收敛队列
+func (this *BulkWrite) retainFailures(err error) {
+	var ex mongo.BulkWriteException
+	if !errors.As(err, &ex) || len(ex.WriteErrors) == 0 {
+		return //无法定位具体条目:断连/仅写关注失败,全量保留等待重试
+	}
+	failed := make(map[int]struct{}, len(ex.WriteErrors))
+	var table string
+	if this.tx != nil && this.tx.stmt != nil {
+		table = this.tx.stmt.table
+	}
+	for _, we := range ex.WriteErrors {
+		failed[we.Index] = struct{}{}
+		logger.Alert("bulkWrite 部分失败,table:%v,index:%v,code:%v,error:%v", table, we.Index, we.Code, we.Message)
+	}
+	remain := make([]mongo.WriteModel, 0, len(this.models)-len(failed))
+	for i, m := range this.models {
+		if _, bad := failed[i]; bad {
+			continue
+		}
+		remain = append(remain, m)
+	}
+	this.models = remain
+}
+
+// resolveOrdered 还原当前 opts 解析后的 Ordered 设置(未设置时为 mongo 默认 true)
+func (this *BulkWrite) resolveOrdered() bool {
+	opts := &options.BulkWriteOptions{}
+	for _, l := range this.opts {
+		for _, f := range l.List() {
+			_ = f(opts)
+		}
+	}
+	if opts.Ordered == nil {
+		return options.DefaultOrdered
+	}
+	return *opts.Ordered
 }
 func (this *BulkWrite) update(data any, where []any, includeZeroValue bool) {
 	stmt := this.tx.stmt
