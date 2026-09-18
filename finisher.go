@@ -230,3 +230,60 @@ func (db *DB) Count(count any, conds ...any) (tx *DB) {
 		return err
 	})
 }
+
+// Aggregate 聚合查询
+// pipeline 为MongoDB聚合管道(mongo.Pipeline), Where等链式条件将作为$match阶段拼接在管道最前面,
+// 即基于聚合前的原始文档过滤(同SQL中GROUP BY前的WHERE); HAVING语义请直接在pipeline中追加$match
+//
+// dest 接收聚合结果集, 必须为【指向切片的指针】, 聚合输出的每个结果文档解码为切片的一个元素;
+// 切片元素类型按聚合末阶段的输出键自定义结构体, bson标签与输出键一一对应即可:
+//
+//	// 1) 按分组键分组求和: 输出文档为 {_id:分组键, sum:聚合值}, 每个分组一行
+//	var rows []struct {
+//	    Group string `bson:"_id"` // $group 的 _id 即分组键
+//	    Sum   int64  `bson:"sum"` // $group 里别名 sum 的 $sum 表达式
+//	}
+//	pipeline := mongo.Pipeline{bson.D{
+//	    {Key: "$group", Value: bson.D{
+//	        {Key: "_id", Value: "$guild"},                       // 分组键
+//	        {Key: "sum", Value: bson.D{{Key: "$sum", Value: "$power"}}}, // 求和别名
+//	    }},
+//	}}
+//	db.Model(&GuildMember{}).Aggregate(&rows, pipeline)
+//
+//	// 2) 无分组全局求和: $group 的 _id 固定传 nil, 整个集合只产出一行(空集合时切片为空)
+//	var rows []struct{ Sum int64 `bson:"sum"` }
+//	pipeline := mongo.Pipeline{bson.D{
+//	    {Key: "$group", Value: bson.D{
+//	        {Key: "_id", Value: nil},
+//	        {Key: "sum", Value: bson.D{{Key: "$sum", Value: "$power"}}},
+//	    }},
+//	}}
+//
+//	// 3) 计数: $group _id:nil + $sum:1, 输出 {count:N}
+//	var rows []struct{ Count int64 `bson:"count"` }
+//
+// 对应规则: 输出键与结构体字段按bson标签匹配(顺序无关), 输出中多出的键忽略, 结构体缺失的键保持零值;
+// dest 与 Model 类型无关, 不要复用模型结构体来接
+// Order/Limit/Select/Page 等链式方法不参与聚合, 排序/截断/投影请在pipeline中使用$sort/$limit/$project
+// 必须先通过Model或Table指定集合, dest无法用于解析集合
+// db.Model(&GuildMember{}).Where("guild = ?", gid).Aggregate(&rows, pipeline)
+// db.Table("guild_member").Aggregate(&rows, pipeline, "guild = ?", gid)
+// +++[alexjin][2026-09-18]
+func (db *DB) Aggregate(dest any, pipeline mongo.Pipeline, conds ...any) (tx *DB) {
+	tx = db.getInstance()
+	// dest是聚合结果集而非模型行, 无法像Query那样回退用value解析集合,
+	// 缺少Model/Table时直接报错, 防止静默聚合到错误的集合上
+	if tx.stmt.model == nil && tx.stmt.table == "" {
+		return tx.Errorf("aggregate requires Model or Table to resolve collection")
+	}
+	if len(conds) > 0 {
+		tx = tx.Where(conds[0], conds[1:]...)
+	}
+	tx.stmt.value = dest
+	return tx.stmt.callbacks.Call(tx, func(db *DB, client *mongo.Client) (err error) {
+		return cmdAggregate(tx, client, pipeline)
+	})
+}
+
+//---[alexjin][2026-09-18]

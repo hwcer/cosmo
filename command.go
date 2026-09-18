@@ -343,3 +343,42 @@ func cmdQuery(tx *DB, client *mongo.Client) (err error) {
 
 	return
 }
+
+// +++[alexjin][2026-09-18]
+// matchPipeline 在聚合管道最前面拼接$match阶段, filter为空时原样返回
+// 通过make+copy生成全新切片, 不修改调用方传入的pipeline(长度、容量与底层数组均不受影响);
+// 管道内各阶段文档仅按引用传递, 本函数与驱动都只读取不写入
+func matchPipeline(filter clause.Filter, pipeline mongo.Pipeline) mongo.Pipeline {
+	if len(filter) == 0 {
+		return pipeline
+	}
+	pipe := make(mongo.Pipeline, 0, len(pipeline)+1)
+	pipe = append(pipe, bson.D{{Key: "$match", Value: filter}})
+	pipe = append(pipe, pipeline...)
+	return pipe
+}
+
+// cmdAggregate 聚合查询
+// pipeline 为调用方提供的聚合管道, Where条件作为$match阶段拼接在管道最前面
+// dest必须为指向切片的指针
+func cmdAggregate(tx *DB, client *mongo.Client, pipeline mongo.Pipeline) (err error) {
+	stmt := tx.stmt
+	// 聚合没有单文档语义, dest必须为指针切片(与cursor.All的要求一致), 提前给出明确错误
+	rv := reflect.ValueOf(stmt.value)
+	if rv.Kind() != reflect.Ptr || rv.Elem().Kind() != reflect.Slice {
+		return fmt.Errorf("aggregate dest must be a pointer to slice, got %T", stmt.value)
+	}
+	coll := client.Database(tx.dbname).Collection(stmt.table)
+	pipe := matchPipeline(stmt.Clause.Build(stmt.schema), pipeline)
+	var cursor *mongo.Cursor
+	if cursor, err = coll.Aggregate(stmt.Context, pipe); err != nil {
+		return
+	}
+	// cursor.All会耗尽并关闭cursor, 同时通过原始指针写回结果切片
+	if err = cursor.All(stmt.Context, stmt.value); err == nil {
+		tx.RowsAffected = int64(stmt.reflectValue.Len())
+	}
+	return
+}
+
+//---[alexjin][2026-09-18]
