@@ -83,7 +83,6 @@ func TestCosmo(t *testing.T) {
 	}
 }
 
-// +++[alexjin][2026-09-18]
 // TestMatchPipeline 纯构建测试（不依赖mongo）：$match拼接顺序与调用方切片不可变
 func TestMatchPipeline(t *testing.T) {
 	q := New()
@@ -195,5 +194,3 @@ func TestAggregate(t *testing.T) {
 		t.Fatal("缺 Model/Table 应报错")
 	}
 }
-
-//---[alexjin][2026-09-18]

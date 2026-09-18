@@ -269,7 +269,6 @@ func (db *DB) Count(count any, conds ...any) (tx *DB) {
 // 必须先通过Model或Table指定集合, dest无法用于解析集合
 // db.Model(&GuildMember{}).Where("guild = ?", gid).Aggregate(&rows, pipeline)
 // db.Table("guild_member").Aggregate(&rows, pipeline, "guild = ?", gid)
-// +++[alexjin][2026-09-18]
 func (db *DB) Aggregate(dest any, pipeline mongo.Pipeline, conds ...any) (tx *DB) {
 	tx = db.getInstance()
 	// dest是聚合结果集而非模型行, 无法像Query那样回退用value解析集合,
@@ -285,5 +284,3 @@ func (db *DB) Aggregate(dest any, pipeline mongo.Pipeline, conds ...any) (tx *DB
 		return cmdAggregate(tx, client, pipeline)
 	})
 }
-
-//---[alexjin][2026-09-18]

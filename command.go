@@ -344,7 +344,6 @@ func cmdQuery(tx *DB, client *mongo.Client) (err error) {
 	return
 }
 
-// +++[alexjin][2026-09-18]
 // matchPipeline 在聚合管道最前面拼接$match阶段, filter为空时原样返回
 // 通过make+copy生成全新切片, 不修改调用方传入的pipeline(长度、容量与底层数组均不受影响);
 // 管道内各阶段文档仅按引用传递, 本函数与驱动都只读取不写入
@@ -380,5 +379,3 @@ func cmdAggregate(tx *DB, client *mongo.Client, pipeline mongo.Pipeline) (err er
 	}
 	return
 }
-
-//---[alexjin][2026-09-18]
