@@ -103,10 +103,14 @@ func (db *DB) Order(key string, value int) (tx *DB) {
 	} else {
 		value = -1
 	}
-	if tx.stmt.orders == nil {
-		tx.stmt.orders = make(map[string]int)
+	//同键重复 Order 覆盖方向(保持旧 map 语义),新键按调用顺序追加
+	for i := range tx.stmt.orders {
+		if tx.stmt.orders[i].key == key {
+			tx.stmt.orders[i].dir = value
+			return
+		}
 	}
-	tx.stmt.orders[key] = value
+	tx.stmt.orders = append(tx.stmt.orders, orderField{key: key, dir: value})
 	return
 }
 

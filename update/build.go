@@ -2,11 +2,14 @@ package update
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
+	"strings"
 
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/utils"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // MongodbFieldSplit MongoDB字段分隔符
@@ -89,7 +92,11 @@ func parseMap(desc any, sch *schema.Schema) (update Update, err error) {
 	case *Update:
 		update = *v
 	case map[string]any:
-		update = NewFromMap(v)
+		update = updateFromMap(v)
+	case bson.M:
+		//bson.M 是命名类型(type M map[string]any),旧实现接不住落进 default
+		//整批塞 $set,文档承诺的混合操作符写法整体报错
+		update = updateFromMap(v)
 	default:
 		update = Update{}
 		err = update.Convert(UpdateTypeSet, v)
@@ -102,6 +109,48 @@ func parseMap(desc any, sch *schema.Schema) (update Update, err error) {
 	} else {
 		return update, nil
 	}
+}
+
+// updateFromMap 把 map 形态的更新拆成 Update:
+//   - 普通键 → $set(值拷贝进新块,不别名调用方的 map)
+//   - $ 前缀键($inc/$setOnInsert/$push 等)且值为 map → 提升为独立操作符块,
+//     交给后续 Transform 做字段名换名
+//
+// 🔴 旧实现把整张 map 塞进 $set:文档承诺的混合操作符写法
+//
+//	Update(bson.M{"Name":"x","$inc":bson.M{"Lv":1}}) 必然整体报错
+func updateFromMap(vs map[string]any) (update Update) {
+	update = Update{}
+	set := bson.M{}
+	for k, v := range vs {
+		if !strings.HasPrefix(k, "$") {
+			set[k] = v
+			continue
+		}
+		switch m := v.(type) {
+		case map[string]any:
+			blk := update[k]
+			if blk == nil {
+				blk = bson.M{}
+				update[k] = blk
+			}
+			maps.Copy(blk, m)
+		case bson.M:
+			blk := update[k]
+			if blk == nil {
+				blk = bson.M{}
+				update[k] = blk
+			}
+			maps.Copy(blk, m)
+		default:
+			//$ 键但值不是 map:无合法语义,保留进 $set 由服务端裁决
+			set[k] = v
+		}
+	}
+	if len(set) > 0 {
+		update[UpdateTypeSet] = set
+	}
+	return
 }
 
 // parseStruct 解析Struct类型的值为Update

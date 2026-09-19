@@ -199,7 +199,12 @@ func cmdUpdate(tx *DB, client *mongo.Client) (err error) {
 	}
 	coll := client.Database(tx.dbname).Collection(stmt.table)
 	if stmt.multiple {
+		//🔴 upsert 语义对齐 UpdateOne 分支:旧实现从不 SetUpsert,
+		// .Upsert().Updates(map) 静默退化为纯更新(匹配 0 行且无任何报错)
 		opts := options.UpdateMany()
+		if upsert || tx.stmt.upsert {
+			opts.SetUpsert(true)
+		}
 		var result *mongo.UpdateResult
 		if result, err = coll.UpdateMany(stmt.Context, filter, data, opts); err == nil {
 			tx.RowsAffected = result.ModifiedCount

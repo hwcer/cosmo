@@ -34,7 +34,7 @@ type Statement struct {
 	Paging               *Paging         // 分页信息
 	Context              context.Context // 操作上下文
 	schema               *schema.Schema  // 模型的元数据信息
-	orders               map[string]int  // 排序字段映射(1:升序, -1:降序)
+	orders               []orderField    // 排序字段(按调用顺序生成 bson.D;map 迭代序随机,复合排序曾漂移)
 	upsert               bool            // 文档不存在时是否自动插入(upsert操作)
 	selector             update.Selector // 更新时的字段选择器
 	multiple             bool            // 是否强制批量更新
@@ -101,16 +101,22 @@ func (stmt *Statement) DBName(name string) string {
 	return name
 }
 
+// orderField 单个排序字段:字段名与方向(1:升序, -1:降序)
+type orderField struct {
+	key string
+	dir int
+}
+
 // Order 生成MongoDB排序条件
-// 将内部的排序映射转换为MongoDB的bson.D格式
-// 返回值: 排序条件
+// 按调用顺序生成 bson.D:复合排序 .Order("lv",-1).Order("exp",-1) 的语义是
+// "先 lv 后 exp",旧实现用 map 存储迭代序随机,排序/分页结果在多次调用间漂移
 func (stmt *Statement) Order() (order bson.D) {
 	all := map[string]struct{}{}
-	for k, v := range stmt.orders {
-		k = stmt.DBName(k)
+	for _, of := range stmt.orders {
+		k := stmt.DBName(of.key)
 		if _, ok := all[k]; !ok {
 			all[k] = struct{}{}
-			order = append(order, bson.E{Key: k, Value: v})
+			order = append(order, bson.E{Key: k, Value: of.dir})
 		}
 	}
 	return

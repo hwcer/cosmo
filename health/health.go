@@ -353,14 +353,17 @@ func (m *Manager) tryRecover() {
 			continue
 		}
 
-		// 4.3 检查连接池状态
+		// 4.3 检查连接池状态(serverStatus 需要额外权限,最小权限账号常被拒)
+		//🔴 必须用独立变量承接:旧实现复用 err,serverStatus 失败(非致命)会把
+		// 373 行的 if err != nil 误触发——恢复流程 return 且不 Swap 新 client,
+		// 已 Connect+Ping 成功的 newClient 无人 Disconnect(每轮泄漏一个连接池)
 		poolCtx, poolCancel := context.WithTimeout(ctx, Config.RecoveryQueryTimeout)
 		var serverStatus bson.M
-		err = db.RunCommand(poolCtx, bson.D{{Key: "serverStatus", Value: 1}}).Decode(&serverStatus)
+		ssErr := db.RunCommand(poolCtx, bson.D{{Key: "serverStatus", Value: 1}}).Decode(&serverStatus)
 		poolCancel()
-		if err != nil {
+		if ssErr != nil {
 			// 连接池状态检查失败不是致命错误，仅记录警告
-			logger.Debug("连接池状态检查失败 (尝试 %d/%d): %v", attempt+1, maxRetries+1, err)
+			logger.Debug("连接池状态检查失败 (尝试 %d/%d): %v", attempt+1, maxRetries+1, ssErr)
 		} else {
 			logger.Debug("新连接服务器状态: version=%v, uptime=%v, connections=%v", serverStatus["version"], serverStatus["uptime"], serverStatus["connections"])
 		}
