@@ -10,10 +10,10 @@ import (
 // 创建默认的处理器映射，包括查询、创建、更新和删除操作
 func initializeCallbacks() *callbacks {
 	cb := &callbacks{processors: make(map[string]*processor)}
-	cb.processors["query"] = &processor{handle: cmdQuery}   // 查询操作处理器
-	cb.processors["create"] = &processor{handle: cmdCreate} // 创建操作处理器
-	cb.processors["update"] = &processor{handle: cmdUpdate} // 更新操作处理器
-	cb.processors["delete"] = &processor{handle: cmdDelete} // 删除操作处理器
+	cb.processors["query"] = &processor{handle: cmdQuery, readOnly: true}  // 查询操作处理器（只读，连接恢复后可自动重试）
+	cb.processors["create"] = &processor{handle: cmdCreate}                // 创建操作处理器
+	cb.processors["update"] = &processor{handle: cmdUpdate}                // 更新操作处理器
+	cb.processors["delete"] = &processor{handle: cmdDelete}                // 删除操作处理器
 	return cb
 }
 
@@ -24,7 +24,8 @@ type callbacks struct {
 
 // processor 操作处理器，用于执行具体的数据库操作
 type processor struct {
-	handle executeHandle // 操作处理函数
+	handle   executeHandle // 操作处理函数
+	readOnly bool          // 是否只读操作：只读在连接恢复后可自动重试，写操作永不自动重试
 }
 
 // Call 执行自定义调用
@@ -86,10 +87,18 @@ func (p *processor) Execute(db *DB, done ...executeDone) (tx *DB) {
 		return
 	}
 	//defer tx.reset()
-	// 使用PoolManager.Execute获取client并传递给handle
-	err := tx.pool.Execute(stmt.Context, func(client *mongo.Client) error {
-		return p.handle(tx, client)
-	})
+	// 使用PoolManager获取client并传递给handle
+	// 只读操作走 ExecuteRead（连接恢复后可重试一次）；写操作走 Execute（永不自动重试，防 $inc/$push 重复应用）
+	var err error
+	if p.readOnly {
+		err = tx.pool.ExecuteRead(stmt.Context, func(client *mongo.Client) error {
+			return p.handle(tx, client)
+		})
+	} else {
+		err = tx.pool.Execute(stmt.Context, func(client *mongo.Client) error {
+			return p.handle(tx, client)
+		})
+	}
 	if err != nil {
 		tx.Errorf(err)
 		return

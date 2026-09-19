@@ -513,12 +513,21 @@ func (m *Manager) warmupConnections(ctx context.Context) error {
 	return nil
 }
 
-// Execute 安全执行数据库操作
-// 参数 ctx: 上下文，用于控制操作超时
-// 参数 operation: 数据库操作函数，接收mongo.Client作为参数
-// 返回值: 操作过程中的错误
-// 提供连接健康检查和自动恢复机制，确保操作的可靠性
+// Execute 安全执行数据库操作（写语义）
+// 写操作失败时不做自动重试：操作可能已在服务端生效（如主从切换后响应丢失），
+// 换新连接重试是全新的请求，服务端无法去重，$inc/$push 等非幂等写会被重复应用。
+// 调用方应凭业务幂等键决定是否重试。失败时会非阻塞触发后台健康检查与恢复。
 func (m *Manager) Execute(ctx context.Context, operation func(*mongo.Client) error) error {
+	return m.execute(ctx, operation, false)
+}
+
+// ExecuteRead 执行只读操作（读语义）
+// 连接不健康时等待后台恢复，恢复成功后自动重试一次；只读操作重试无副作用。
+func (m *Manager) ExecuteRead(ctx context.Context, operation func(*mongo.Client) error) error {
+	return m.execute(ctx, operation, true)
+}
+
+func (m *Manager) execute(ctx context.Context, operation func(*mongo.Client) error, retryable bool) error {
 	// 检查上下文是否已取消
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -542,20 +551,23 @@ func (m *Manager) Execute(ctx context.Context, operation func(*mongo.Client) err
 		return err
 	}
 
-	// 连接不健康，尝试恢复
-	logger.Error("操作失败，连接不健康，尝试恢复...")
+	// 连接不健康：非阻塞触发后台健康检查/恢复，不在业务协程内同步恢复（恢复可能长达数分钟）
+	logger.Error("操作失败，连接不健康，已触发后台恢复")
+	scc.GO(m.checkHealth)
 
-	// 尝试恢复连接
-	m.tryRecover()
+	// 写操作直接返回错误，由调用方决定重试
+	if !retryable {
+		return fmt.Errorf("数据库连接不健康，写操作未自动重试(操作可能已在服务端生效): %w", err)
+	}
 
-	// 等待恢复完成
+	// 读操作：等待恢复完成后重试一次
 	if !m.WaitForHealthy(ctx, Config.ExecuteWaitTimeout) {
 		logger.Error("连接恢复失败")
 		return fmt.Errorf("无法恢复数据库连接: %w", err)
 	}
 
 	// 连接恢复成功，再次尝试执行操作
-	logger.Debug("连接恢复成功，重试操作...")
+	logger.Debug("连接恢复成功，重试读操作...")
 	return operation(m.client.Load())
 }
 
