@@ -70,6 +70,10 @@ func cmdRange(tx *DB, client *mongo.Client) (err error) {
 
 	coll := client.Database(tx.dbname).Collection(stmt.table)
 	filter := stmt.Clause.Build(stmt.schema)
+	if qerr := stmt.Clause.Error(); qerr != nil {
+		tx.Errorf(qerr)
+		return
+	}
 
 	opts := options.Find()
 	if stmt.Paging.Size > 0 {
@@ -125,6 +129,10 @@ func cmdPage(tx *DB, client *mongo.Client) (err error) {
 
 	coll := client.Database(tx.dbname).Collection(stmt.table)
 	filter := stmt.Clause.Build(stmt.schema)
+	if qerr := stmt.Clause.Error(); qerr != nil {
+		tx.Errorf(qerr)
+		return
+	}
 
 	if paging.Record == 0 {
 		var val int64
@@ -182,6 +190,10 @@ func cmdUpdate(tx *DB, client *mongo.Client) (err error) {
 		return
 	}
 	filter := stmt.Clause.Build(stmt.schema)
+	if qerr := stmt.Clause.Error(); qerr != nil {
+		tx.Errorf(qerr)
+		return
+	}
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
@@ -259,6 +271,10 @@ func findOneAndUpdate(tx *DB, coll *mongo.Collection, filter clause.Filter, data
 // cmdDelete delete value match given conditions, if it value has primary key, then will including primary key as condition
 func cmdDelete(tx *DB, client *mongo.Client) (err error) {
 	filter := tx.stmt.Clause.Build(tx.stmt.schema)
+	if qerr := tx.stmt.Clause.Error(); qerr != nil {
+		tx.Errorf(qerr)
+		return
+	}
 	if len(filter) == 0 {
 		return ErrMissingWhereClause
 	}
@@ -279,6 +295,10 @@ func cmdDelete(tx *DB, client *mongo.Client) (err error) {
 // value must be a pointer to a slice
 func cmdQuery(tx *DB, client *mongo.Client) (err error) {
 	filter := tx.stmt.Clause.Build(tx.stmt.schema)
+	if qerr := tx.stmt.Clause.Error(); qerr != nil {
+		tx.Errorf(qerr)
+		return
+	}
 	//b, _ := json.Marshal(filter)
 	//fmt.Printf("Query Filter:%+v\n", string(b))
 	var multiple bool

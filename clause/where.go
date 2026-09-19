@@ -3,6 +3,7 @@
 package clause
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/hwcer/logger"
@@ -168,14 +169,23 @@ func (q *Query) formClause(query string, args []any) {
 
 		// 检测并解析条件操作符（如=, !=, >, <等）
 		// 按优先级顺序检查，确保长操作符（如IN, >=）先被匹配
+		matched := false
 		for _, w := range whereConditionArr {
 			if strings.Contains(pair, whereConditionSql[w]) {
+				matched = true
 				// 解析条件对并创建条件节点
 				if node := parseWherePair(pair, w, v); node != nil {
 					nodes = append(nodes, node)
+				} else if q.Err == nil {
+					//🔴 解析失败不得静默丢弃:少一个条件会让删除/更新范围被放大
+					q.Err = fmt.Errorf("where clause parse failed: %q", pair)
 				}
 				break
 			}
+		}
+		if !matched && q.Err == nil {
+			//片段里没有任何已知操作符:整段条件会被无声丢掉
+			q.Err = fmt.Errorf("where clause has no valid operator: %q", pair)
 		}
 	}
 

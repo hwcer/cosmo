@@ -58,6 +58,8 @@ type Query struct {
 	filter  Filter               // 查询过滤器
 	where   []*Node              // 简单条件节点列表
 	complex map[string][][]*Node // 复杂条件节点分组
+	Err     error                // 🔴 条件解析错误:解析失败的条件被静默丢弃会让删除/更新范围
+	// 被放大(少一个条件=多删多改一片),必须在执行前拦截
 }
 
 // Len 返回查询条件中节点的总数，包括简单条件和复杂条件。
@@ -281,4 +283,9 @@ func (q *Query) Marshal() ([]byte, error) {
 func (q *Query) String() string {
 	b, _ := json.Marshal(q.Build(nil))
 	return string(b)
+}
+
+// Error 返回条件解析过程中积累的错误(无错误返回 nil)
+func (q *Query) Error() error {
+	return q.Err
 }
