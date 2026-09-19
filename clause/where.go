@@ -174,11 +174,14 @@ func (q *Query) formClause(query string, args []any) {
 			if strings.Contains(pair, whereConditionSql[w]) {
 				matched = true
 				// 解析条件对并创建条件节点
-				if node := parseWherePair(pair, w, v); node != nil {
+				node, perr := parseWherePair(pair, w, v)
+				if perr != nil {
+					//🔴 解析失败/字面量拒绝不得静默丢弃:少一个条件会让删除/更新范围被放大
+					if q.Err == nil {
+						q.Err = perr
+					}
+				} else if node != nil {
 					nodes = append(nodes, node)
-				} else if q.Err == nil {
-					//🔴 解析失败不得静默丢弃:少一个条件会让删除/更新范围被放大
-					q.Err = fmt.Errorf("where clause parse failed: %q", pair)
 				}
 				break
 			}
@@ -251,11 +254,16 @@ func (q *Query) Where(format any, cons ...any) {
 // 参数 w: 条件操作符（如=, !=, >等）
 // 参数 v: 条件值（用于替换"?"占位符）
 // 返回值: 解析后的条件节点，包含字段名、操作符类型和值
-func parseWherePair(pair string, w string, v any) *Node {
+// parseWherePair 解析SQL风格的条件对（如"name = ?"）
+// 返回值: 条件节点与错误。🔴 非占位符的字面量一律拒绝:
+// 字符串里写裸数字/带引号字符串时解析器无法得知业务类型,旧实现原样当字符串
+// 产出 {"lv":{"$gt":"10"}} 这类永不匹配的静默空查询(BSON 类型序中数字<字符串,
+// 且 MongoDB 不做类型转换)。正确写法是 "?"+类型化参数,或显式前缀 int(10)/float64(1.5)
+func parseWherePair(pair string, w string, v any) (*Node, error) {
 	// 将条件对字符串按操作符拆分为字段名和值两部分
 	arr := strings.Split(pair, w)
 	if len(arr) != 2 {
-		return nil // 格式错误，无法解析
+		return nil, fmt.Errorf("condition pair format invalid: %q", pair)
 	}
 
 	// 创建条件节点
@@ -271,13 +279,25 @@ func parseWherePair(pair string, w string, v any) *Node {
 	// 如果值是"?"占位符，则使用传入的参数值替换
 	if r == "?" {
 		r = v
-	} else {
-		// 否则格式化值（如将字符串"int(123)"转换为整数123）
+	} else if hasTypedPrefix(r.(string)) {
+		// 显式类型前缀(int(123)/float64(1.5))是字面量的唯一合法形态
 		r = formatWhereValue(r)
+	} else {
+		return nil, fmt.Errorf("literal %q not allowed in %q: use ? placeholder with typed args, or explicit prefix like int(10)", r, pair)
 	}
 
 	node.v = r
-	return node
+	return node, nil
+}
+
+// hasTypedPrefix 判断字面量是否携带显式类型前缀(int( / float64( 等)
+func hasTypedPrefix(s string) bool {
+	for t := range formatWhereTypes {
+		if strings.HasPrefix(s, t) {
+			return true
+		}
+	}
+	return false
 }
 
 // formatWhereValue 格式化查询条件值
