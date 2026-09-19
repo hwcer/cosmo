@@ -48,7 +48,8 @@ func (q *Query) Build(model *schema.Schema) Filter {
 			filter.Match(QueryOperationAND, gf)
 		}
 	}
-	q.filter = filter
+	//🔴 不回写 q.filter:回写后同一 Query 重复 Build 会把 where 重放叠加上一次的
+	//结果,Eq 撞上 $in 翻转逻辑条件每 Build 一次翻倍膨胀;不回写则 Build 幂等
 	return filter
 }
 

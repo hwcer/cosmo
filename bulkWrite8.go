@@ -3,18 +3,21 @@ package cosmo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo/clause"
 	"github.com/hwcer/cosmo/update"
+	"github.com/hwcer/logger"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // BulkWrite8 跨集合批量写入，需要 MongoDB 8.0+
-// 通过 client.BulkWrite() 实现，支持多个集合的操作在一次请求中原子提交
+// 通过 client.BulkWrite() 实现。⚠️ 整批不具备事务原子性(单条原子、整批不回滚):
+// 需要跨集合 all-or-nothing 请显式使用多文档事务。失败保留语义见 Submit
 type BulkWrite8 struct {
 	tx      *DB
 	ctx     context.Context
@@ -132,7 +135,15 @@ func (bw8 *BulkWrite8) Delete(model any, where ...any) {
 	}
 }
 
-// Submit 提交所有跨集合操作，原子执行
+// Submit 提交所有跨集合批量写入。
+//
+// 🔴 MongoDB 8.0 bulkWrite 整批**不具备事务原子性**(单条原子、整批不回滚,
+// 除非显式包多文档事务),注释与文档不得再宣称"原子提交"。
+// 部分成功语义与单集合版 BulkWrite 对齐:unordered(本结构默认)返回逐条错误时
+// 按 Index 剔除已生效条目只保留失败的等下次重试;ordered(failure 之后的条目
+// 未执行,Index 不可信)与整批级错误全量保留。
+// 不剔除的话重发时 $inc/$push 类已生效条目被重复应用,跨集合版本连
+// "失败卡死"提示都没有,是静默双写。
 func (bw8 *BulkWrite8) Submit() error {
 	if bw8.Error != nil {
 		return bw8.Error
@@ -143,9 +154,12 @@ func (bw8 *BulkWrite8) Submit() error {
 	if len(bw8.opts) == 0 {
 		bw8.opts = append(bw8.opts, options.ClientBulkWrite().SetOrdered(false))
 	}
+	unordered := !bw8.resolveOrdered()
 	err := bw8.tx.pool.Execute(bw8.ctx, func(client *mongo.Client) (err error) {
 		if bw8.result, err = client.BulkWrite(bw8.ctx, bw8.writes, bw8.opts...); err == nil {
 			bw8.writes = nil
+		} else if unordered {
+			bw8.retainFailures(err)
 		}
 		return
 	})
@@ -153,6 +167,40 @@ func (bw8 *BulkWrite8) Submit() error {
 		return NormalizeError(err)
 	}
 	return nil
+}
+
+// resolveOrdered 还原当前 opts 解析后的 Ordered 设置(ClientBulkWrite 默认 false,
+// 但 bw8 显式 SetOrdered(false),显式 Ordered(true) 的调用方按 ordered 语义处理)
+func (bw8 *BulkWrite8) resolveOrdered() bool {
+	opts := &options.ClientBulkWriteOptions{}
+	for _, l := range bw8.opts {
+		for _, f := range l.List() {
+			_ = f(opts)
+		}
+	}
+	if opts.Ordered == nil {
+		return false
+	}
+	return *opts.Ordered
+}
+
+// retainFailures 部分成功清理:按 ClientBulkWriteException.WriteErrors 的 Index
+// 剔除已生效条目,只保留失败的。WriteErrors 为空(断连/写关注失败等无法定位
+// 具体条目)时全量保留等待重试
+func (bw8 *BulkWrite8) retainFailures(err error) {
+	var ex mongo.ClientBulkWriteException
+	if !errors.As(err, &ex) || len(ex.WriteErrors) == 0 {
+		return
+	}
+	remain := make([]mongo.ClientBulkWrite, 0, len(bw8.writes))
+	for i, w := range bw8.writes {
+		if we, bad := ex.WriteErrors[i]; bad {
+			logger.Alert("bulkWrite8 部分失败,collection:%v,index:%v,code:%v,error:%v", w.Collection, i, we.Code, we.Message)
+			continue
+		}
+		remain = append(remain, w)
+	}
+	bw8.writes = remain
 }
 
 // Result 获取上一次 Submit 的结果
