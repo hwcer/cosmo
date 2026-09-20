@@ -1,6 +1,7 @@
 package clause
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -12,9 +13,10 @@ var formatWhereTypes = map[string]formatWhereFunc{}
 // formatWhereFunc 定义查询条件值的格式化函数类型
 // 参数 t: 类型前缀（如"int(")
 // 参数 s: 包含类型前缀的原始字符串值
-// 返回值: 格式化后的实际值
+// 返回值: 格式化后的实际值与解析错误——类型前缀是字面量的唯一合法形态,
+// 该形态自身解析失败(如 int(abc))不得静默转 0 产出错误条件
 
-type formatWhereFunc func(t, s string) any
+type formatWhereFunc func(t, s string) (any, error)
 
 // init 初始化查询条件值的格式化函数映射
 func init() {
@@ -32,20 +34,24 @@ func init() {
 // 参数 t: 类型前缀（如"int(")
 // 参数 s: 包含类型前缀的原始字符串值
 // 返回值: 转换后的整数
-func formatWhereFuncInt(t, s string) any {
-	s = strings.TrimPrefix(s, t)
-	s = strings.TrimSuffix(s, ")")
-	r, _ := strconv.Atoi(s)
-	return r
+func formatWhereFuncInt(t, s string) (any, error) {
+	body := strings.TrimSuffix(strings.TrimPrefix(s, t), ")")
+	r, err := strconv.Atoi(body)
+	if err != nil {
+		return nil, fmt.Errorf("typed literal %q is not a valid int", t+body+")")
+	}
+	return r, nil
 }
 
 // formatWhereFuncFloat 将字符串转换为浮点数类型
 // 参数 t: 类型前缀（如"float(")
 // 参数 s: 包含类型前缀的原始字符串值
 // 返回值: 转换后的浮点数
-func formatWhereFuncFloat(t, s string) any {
-	s = strings.TrimPrefix(s, t)
-	s = strings.TrimSuffix(s, ")")
-	r, _ := strconv.ParseFloat(s, 64)
-	return r
+func formatWhereFuncFloat(t, s string) (any, error) {
+	body := strings.TrimSuffix(strings.TrimPrefix(s, t), ")")
+	r, err := strconv.ParseFloat(body, 64)
+	if err != nil {
+		return nil, fmt.Errorf("typed literal %q is not a valid float", t+body+")")
+	}
+	return r, nil
 }

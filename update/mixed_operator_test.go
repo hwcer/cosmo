@@ -58,3 +58,20 @@ func TestParseMapMixedOperators(t *testing.T) {
 		t.Fatalf("普通键应进 $set:%v", u3["$set"])
 	}
 }
+
+// 🔴 回归:显式 $set 块与普通键共存时必须合并——
+// 旧实现尾部无条件赋值把循环刚建好的 $set 块整块覆盖,bson.M{"Name":"x","$set":bson.M{"Lv":7}}
+// 里 Lv:7 静默丢失(写库"成功"但字段没变)
+func TestParseMapExplicitSetMerge(t *testing.T) {
+	sch := mustParseSchema(t, &mixedRole{})
+	u, err := parseMap(bson.M{"Name": "x", "$set": bson.M{"Lv": 7}}, sch)
+	if err != nil {
+		t.Fatalf("显式 $set 混写不应报错:%v", err)
+	}
+	if v, ok := u["$set"]["name"]; !ok || v != "x" {
+		t.Fatalf("普通键 Name 应进 $set:%v", u["$set"])
+	}
+	if v, ok := u["$set"]["lv"]; !ok || v != 7 {
+		t.Fatalf("显式 $set 块的 Lv 不得被覆盖丢失:%v", u["$set"])
+	}
+}

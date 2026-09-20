@@ -222,8 +222,13 @@ func (db *DB) Count(count any, conds ...any) (tx *DB) {
 	tx.stmt.value = count
 	return tx.stmt.callbacks.Call(tx, func(db *DB, client *mongo.Client) (err error) {
 		var val int64
-		coll := client.Database(tx.dbname).Collection(tx.stmt.table)
+		//🔴 Where 解析失败必须上抛:静默丢条件会把 Count 放大成全表统计
 		filter := tx.stmt.Clause.Build(db.stmt.schema)
+		if qerr := db.stmt.Clause.Error(); qerr != nil {
+			db.Errorf(qerr)
+			return qerr
+		}
+		coll := client.Database(tx.dbname).Collection(tx.stmt.table)
 		if val, err = coll.CountDocuments(tx.stmt.Context, filter); err == nil {
 			tx.stmt.reflectValue.SetInt(val)
 		}

@@ -114,6 +114,17 @@ func (this *BulkWrite) update(data any, where []any, includeZeroValue bool) {
 	}
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
+	//🔴 解析失败/空过滤器不得进入批量提交:空 filter 的 UpdateOne 会静默更新任意
+	//一条文档。单条路径(cmdUpdate)有 ErrMissingWhereClause 拦截,批量路径同样必须拦截
+	filter := query.Build(stmt.schema)
+	if qerr := query.Error(); qerr != nil {
+		_ = this.tx.Errorf(qerr)
+		return
+	}
+	if len(filter) == 0 {
+		_ = this.tx.Errorf(ErrMissingWhereClause)
+		return
+	}
 	value, upsert, err := update.Build(data, stmt.GetSchema(), stmt.GetSelector(), includeZeroValue)
 	if err != nil {
 		_ = this.tx.Errorf(err)
@@ -123,7 +134,7 @@ func (this *BulkWrite) update(data any, where []any, includeZeroValue bool) {
 		this.filter(value)
 	}
 	model := mongo.NewUpdateOneModel()
-	model.SetFilter(query.Build(stmt.schema))
+	model.SetFilter(filter)
 	model.SetUpdate(value)
 	if upsert || stmt.upsert {
 		model.SetUpsert(true)
@@ -156,7 +167,16 @@ func (this *BulkWrite) Delete(where ...any) {
 	}
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
+	//🔴 同 update():坏条件退化为空 filter 的 DeleteMany 是全集合删除,必须拦截
 	filter := query.Build(this.tx.stmt.schema)
+	if qerr := query.Error(); qerr != nil {
+		_ = this.tx.Errorf(qerr)
+		return
+	}
+	if len(filter) == 0 {
+		_ = this.tx.Errorf(ErrMissingWhereClause)
+		return
+	}
 	multiple := clause.Multiple(filter)
 
 	if multiple {

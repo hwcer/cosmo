@@ -66,6 +66,16 @@ func (bw8 *BulkWrite8) update(model any, data any, where []any, includeZeroValue
 	}
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
+	//🔴 解析失败/空过滤器不得进入批量提交:空 filter 会静默更新任意一条文档
+	filter := query.Build(sch)
+	if qerr := query.Error(); qerr != nil {
+		bw8.Error = NormalizeError(qerr)
+		return
+	}
+	if len(filter) == 0 {
+		bw8.Error = NormalizeError(ErrMissingWhereClause)
+		return
+	}
 	value, upsert, err := update.Build(data, sch, nil, includeZeroValue)
 	if err != nil {
 		bw8.Error = NormalizeError(err)
@@ -74,7 +84,7 @@ func (bw8 *BulkWrite8) update(model any, data any, where []any, includeZeroValue
 	if f, ok := model.(ModelBulkWriteFilter); ok {
 		f.BulkWriteFilter(value)
 	}
-	m := mongo.NewClientUpdateOneModel().SetFilter(query.Build(sch)).SetUpdate(value)
+	m := mongo.NewClientUpdateOneModel().SetFilter(filter).SetUpdate(value)
 	if upsert {
 		m.SetUpsert(true)
 	}
@@ -121,7 +131,16 @@ func (bw8 *BulkWrite8) Delete(model any, where ...any) {
 	}
 	query := clause.New()
 	query.Where(where[0], where[1:]...)
+	//🔴 同 update():坏条件退化为空 filter 的 DeleteMany 是全集合删除,必须拦截
 	filter := query.Build(sch)
+	if qerr := query.Error(); qerr != nil {
+		bw8.Error = NormalizeError(qerr)
+		return
+	}
+	if len(filter) == 0 {
+		bw8.Error = NormalizeError(ErrMissingWhereClause)
+		return
+	}
 	if clause.Multiple(filter) {
 		m := mongo.NewClientDeleteManyModel().SetFilter(filter)
 		bw8.writes = append(bw8.writes, mongo.ClientBulkWrite{
@@ -169,8 +188,10 @@ func (bw8 *BulkWrite8) Submit() error {
 	return nil
 }
 
-// resolveOrdered 还原当前 opts 解析后的 Ordered 设置(ClientBulkWrite 默认 false,
-// 但 bw8 显式 SetOrdered(false),显式 Ordered(true) 的调用方按 ordered 语义处理)
+// resolveOrdered 还原当前 opts 解析后的 Ordered 设置
+// 🔴 未显式设置 Ordered 的自定义 opts,驱动按 ordered 执行(v2 ClientBulkWrite 默认
+// ordered=true);此处若按 unordered 剔除,ordered 下失败之前已生效的条目会被保留重发,
+// $inc/$push 类重复应用——恰是 retainFailures 要防的事。nil 一律兜底到 ordered(全量保留,保守侧)
 func (bw8 *BulkWrite8) resolveOrdered() bool {
 	opts := &options.ClientBulkWriteOptions{}
 	for _, l := range bw8.opts {
@@ -179,7 +200,7 @@ func (bw8 *BulkWrite8) resolveOrdered() bool {
 		}
 	}
 	if opts.Ordered == nil {
-		return false
+		return true
 	}
 	return *opts.Ordered
 }

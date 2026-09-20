@@ -393,6 +393,11 @@ func cmdAggregate(tx *DB, client *mongo.Client, pipeline mongo.Pipeline) (err er
 		return fmt.Errorf("aggregate dest must be a pointer to slice, got %T", stmt.value)
 	}
 	coll := client.Database(tx.dbname).Collection(stmt.table)
+	//🔴 Where 解析失败必须上抛:静默丢条件会让 $match 缺失,聚合范围被放大
+	if qerr := stmt.Clause.Error(); qerr != nil {
+		tx.Errorf(qerr)
+		return
+	}
 	pipe := matchPipeline(stmt.Clause.Build(stmt.schema), pipeline)
 	var cursor *mongo.Cursor
 	if cursor, err = coll.Aggregate(stmt.Context, pipe); err != nil {

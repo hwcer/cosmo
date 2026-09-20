@@ -96,3 +96,22 @@ func TestWhereTypedPrefixAllowed(t *testing.T) {
 		t.Fatalf("int(10) 应转成数字 10:%#v", gt)
 	}
 }
+
+// 🔴 占位符比参数多:旧实现静默以 null 填充,产出 {b:null} 会匹配"字段缺失/为null"
+// 的文档,条件语义走样——必须报错
+func TestWherePlaceholderCountMismatch(t *testing.T) {
+	q := New()
+	q.Where("a = ? AND b = ?", 1)
+	if q.Err == nil {
+		t.Fatal("占位符多于参数应报错(旧实现静默产出 {b:null})")
+	}
+}
+
+// 🔴 类型前缀解析失败:旧实现静默转 0,产出 {"lv":{"$gt":0}} 的错误条件
+func TestWhereTypedPrefixParseFailure(t *testing.T) {
+	q := New()
+	q.Where("lv > int(abc)")
+	if q.Err == nil {
+		t.Fatal("int(abc) 应解析失败(旧实现静默转 0)")
+	}
+}

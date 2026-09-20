@@ -162,7 +162,15 @@ func (q *Query) formClause(query string, args []any) {
 	for _, pair := range arr {
 		var v any
 		// 如果条件片段包含"?"占位符，使用args中的参数替换
-		if strings.Contains(pair, "?") && argIndex < len(args) {
+		if strings.Contains(pair, "?") {
+			if argIndex >= len(args) {
+				//🔴 占位符比参数多:缺失的值会以 null 进过滤器,匹配"字段缺失/为null"
+				//的文档,条件语义静默走样——与解析失败同罪,上抛而非产出 {k:null}
+				if q.Err == nil {
+					q.Err = fmt.Errorf("where clause has more placeholders than args: %q", pair)
+				}
+				continue
+			}
 			v = args[argIndex]
 			argIndex += 1
 		}
@@ -281,7 +289,11 @@ func parseWherePair(pair string, w string, v any) (*Node, error) {
 		r = v
 	} else if hasTypedPrefix(r.(string)) {
 		// 显式类型前缀(int(123)/float64(1.5))是字面量的唯一合法形态
-		r = formatWhereValue(r)
+		var ferr error
+		r, ferr = formatWhereValue(r)
+		if ferr != nil {
+			return nil, ferr
+		}
 	} else {
 		return nil, fmt.Errorf("literal %q not allowed in %q: use ? placeholder with typed args, or explicit prefix like int(10)", r, pair)
 	}
@@ -303,12 +315,12 @@ func hasTypedPrefix(s string) bool {
 // formatWhereValue 格式化查询条件值
 // 支持将字符串值转换为相应的基本数据类型（如"int(123)" => 123）
 // 参数 v: 原始值（通常是字符串类型）
-// 返回值: 格式化后的值（可能转换为其他数据类型）
-func formatWhereValue(v any) any {
+// 返回值: 格式化后的值（可能转换为其他数据类型）与解析错误
+func formatWhereValue(v any) (any, error) {
 	// 只有字符串类型的值需要格式化
 	s, ok := v.(string)
 	if !ok {
-		return v
+		return v, nil
 	}
 
 	// 检查是否需要类型转换（如"int(123)" => 123）
@@ -320,5 +332,5 @@ func formatWhereValue(v any) any {
 		}
 	}
 	// 如果不需要类型转换，返回原始字符串值
-	return v
+	return v, nil
 }

@@ -59,5 +59,9 @@ func (db *DB) indexPartialBuild(sch *schema.Schema, where []string) (any, error)
 		q.Where(v)
 	}
 	r := q.Build(sch)
+	//🔴 与命令路径同口径:解析失败的条件被丢弃会建出过宽的 partialFilterExpression
+	if qerr := q.Error(); qerr != nil {
+		return nil, qerr
+	}
 	return r, nil
 }

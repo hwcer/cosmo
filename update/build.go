@@ -148,7 +148,13 @@ func updateFromMap(vs map[string]any) (update Update) {
 		}
 	}
 	if len(set) > 0 {
-		update[UpdateTypeSet] = set
+		//🔴 显式 $set 块与普通键共存时必须合并:无条件赋值会把上面循环刚建好的
+		//$set 块整块覆盖掉,混写 bson.M{"Name":"x","$set":bson.M{"lv":7}} 时 lv 静默丢失
+		if blk, ok := update[UpdateTypeSet]; ok {
+			maps.Copy(blk, set)
+		} else {
+			update[UpdateTypeSet] = set
+		}
 	}
 	return
 }
