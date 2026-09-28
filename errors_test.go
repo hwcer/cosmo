@@ -245,12 +245,8 @@ func TestErrorNilSafety(t *testing.T) {
 		t.Fatal("NormalizeError(nil *values.Message) should return nil")
 	}
 
-	// 直接把 nil 的 *values.Message 赋给 error 接口会得到非 nil 接口, Err() 用来规避这个陷阱
-	var trap error = db.Error
-	if trap == nil {
-		t.Fatal("expected the classic nil pointer in interface trap, Err() exists to avoid it")
-	}
-
+	// Error 字段已回退为 error 接口,零值即纯 nil,不存在装箱陷阱;
+	// Err() 保留为兼容层(与字段等价)
 	db.Errorf("boom")
 	if db.Err() == nil || db.Err().Error() != "boom" {
 		t.Fatalf("Err() should return the error, got %v", db.Err())
@@ -409,7 +405,8 @@ func TestErrorfStringFormat(t *testing.T) {
 	if db.Error == nil || db.Error.Error() != "table guild not found" {
 		t.Fatalf("unexpected error: %v", db.Error)
 	}
-	if db.Error.Code != values.MessageErrorCodeDefault || len(db.Error.Args) != 0 {
-		t.Fatalf("formatted internal error should use default code without Args, got code=%d args=%v", db.Error.Code, db.Error.Args)
+	m, ok := db.Error.(*values.Message)
+	if !ok || m.Code != values.MessageErrorCodeDefault || len(m.Args) != 0 {
+		t.Fatalf("formatted internal error should use default code without Args, got code=%v args=%v", db.Error, m)
 	}
 }

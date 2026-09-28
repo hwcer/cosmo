@@ -20,7 +20,7 @@ type DB struct {
 	*Config                      // 数据库配置
 	stmt         *Statement      // 数据库操作语句
 	clone        bool            // 是否为克隆体
-	Error        *values.Message // 错误信息, 驱动层错误已由 NormalizeError 统一转换, 可直接读取 Code / Args; 返回给 error 类型时请使用 Err()
+	Error        error           // 错误信息, 驱动层错误已由 NormalizeError 统一转换; 直接读取 Code/Args 请断言 *values.Message
 	RowsAffected int64           // 操作影响的条数
 }
 
@@ -239,11 +239,8 @@ func (db *DB) Errorf(format any, args ...any) *DB {
 }
 
 // Err 以 error 接口返回当前错误，没有错误时返回 nil。
-// Error 字段类型是 *values.Message，在返回值为 error 的函数中直接 return db.Error 会得到一个非 nil 的接口，应改用 return db.Err()。
+// 与 Error 字段等价(字段本身就是 error 接口)，保留是为了兼容旧调用方。
 func (db *DB) Err() error {
-	if db.Error == nil {
-		return nil
-	}
 	return db.Error
 }
 

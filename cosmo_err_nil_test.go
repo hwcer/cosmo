@@ -3,7 +3,6 @@ package cosmo
 import (
 	"fmt"
 	"testing"
-
 )
 
 // 🔴 回归：DB.Error 的类型是 *values.Message（可实现 error 接口），空的
@@ -21,18 +20,13 @@ func TestErrorfNilClears(t *testing.T) {
 		t.Fatal("Errorf(nil) 不得清空/覆盖已存在的 Error（吞错误）")
 	}
 
-	// ⚠️ 语言级事实（顺钉住，防止误判）：字段为 nil 指针时外部装箱依然是
-	// typed-nil（err != nil 判真、%v 打 <nil>、Error() panic）——Go 接口的固有
-	// 行为，框架拦不掉装箱。读取方必须走 Err() 或显式判空（updater 范式；
-	// yyds players/loading 1777584 即按此修复）。
+	// 字段已回退为 error 接口：nil 入参跳过后零值就是纯 nil 接口，
+	// 装箱/返回都不可能再产生 typed-nil（编译期根治，无需再靠 Err() 规避）
 	db2 := &DB{}
-	db2.Errorf(nil) // 从未有错误：nil 入参跳过后 Error 仍是 nil 指针
+	db2.Errorf(nil) // 从未有错误：nil 入参跳过
 	var e error = db2.Error
-	if e == nil {
-		t.Fatal("前提不成立：nil *Message 装箱后 err==nil，typed-nil 未复现")
-	}
-	if fmt.Sprint(e) != "<nil>" {
-		t.Fatalf("typed-nil 的 %%v 应为 <nil>, got %q", fmt.Sprint(e))
+	if e != nil {
+		t.Fatalf("Error 字段零值应为纯 nil 接口, got %T %#v", e, e)
 	}
 
 	// 真错误照常写入且内容完整（非 nil 才处理）

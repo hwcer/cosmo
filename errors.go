@@ -96,7 +96,13 @@ func NormalizeError(err error) *values.Message {
 	if err == nil {
 		return nil
 	}
+	//typed-nil 的 *values.Message 装在 error 接口里 err != nil 判真——
+	//语义上就是"无错误",直接返回 nil;不能落进通用转换路径(那里会调
+	//Error() 解引用 nil 指针 panic),也不能返回 nil 指针让调用方装回字段
 	if m, ok := err.(*values.Message); ok {
+		if m == nil {
+			return nil
+		}
 		return m
 	}
 
